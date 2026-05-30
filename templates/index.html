@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Coffee - Premium Escort Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>☕</text></svg>">
+    
+    <!-- Google AdSense Script -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"
+            crossorigin="anonymous"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#ec4899',
+                        secondary: '#9333ea'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50 min-h-screen">
+    
+    <!-- Age Verification Modal -->
+    <div id="ageVerificationModal" class="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-3xl p-8 max-w-md mx-4 text-center shadow-2xl">
+            <div class="text-6xl mb-4">🔞</div>
+            <h2 class="text-3xl font-bold text-gray-800 mb-4">Age Verification</h2>
+            <p class="text-gray-600 mb-6">You must be 18 years or older to access this site.</p>
+            <div class="flex gap-4">
+                <button onclick="verifyAge(true)" class="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition">
+                    I'm 18+
+                </button>
+                <button onclick="verifyAge(false)" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-300 transition">
+                    Exit
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="text-3xl">☕</div>
+                <h1 class="text-2xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">Coffee</h1>
+            </div>
+            
+            <nav class="hidden md:flex items-center gap-6">
+                <a href="#" onclick="showPage('home')" class="text-gray-700 hover:text-pink-500 transition">Home</a>
+                <a href="#" onclick="showPage('search')" class="text-gray-700 hover:text-pink-500 transition">Search</a>
+                <a href="#" onclick="showPage('events')" class="text-gray-700 hover:text-pink-500 transition">Events</a>
+            </nav>
+            
+            <div class="flex items-center gap-4">
+                <button id="authButton" onclick="showAuthModal()" class="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-6 py-2 rounded-full font-semibold hover:shadow-lg transition">
+                    Sign In
+                </button>
+                <button id="profileButton" onclick="showPage('profile')" class="hidden">
+                    <img id="profileImage" src="" alt="Profile" class="w-10 h-10 rounded-full border-2 border-pink-500">
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="mainContent" class="w-full py-6 pb-24 md:pb-6">
+        <!-- Content will be dynamically loaded here -->
+    </main>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
+        <div class="flex justify-around items-center py-3">
+            <button onclick="showPage('home')" class="flex flex-col items-center gap-1 text-gray-600 hover:text-pink-500 transition">
+                <i class="fas fa-home text-xl"></i>
+                <span class="text-xs">Home</span>
+            </button>
+            <button onclick="showPage('search')" class="flex flex-col items-center gap-1 text-gray-600 hover:text-pink-500 transition">
+                <i class="fas fa-search text-xl"></i>
+                <span class="text-xs">Search</span>
+            </button>
+            <button onclick="showPage('posts')" class="flex flex-col items-center gap-1 text-gray-600 hover:text-pink-500 transition">
+                <i class="fas fa-play-circle text-xl"></i>
+                <span class="text-xs">Posts</span>
+            </button>
+            <button onclick="showPage('inbox')" class="flex flex-col items-center gap-1 text-gray-600 hover:text-pink-500 transition relative">
+                <i class="fas fa-envelope text-xl"></i>
+                <span class="text-xs">Inbox</span>
+                <span id="unreadBadge" class="hidden absolute top-0 right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden overflow-y-auto">
+        <div class="bg-white rounded-3xl p-8 max-w-2xl w-full mx-4 my-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="authModalTitle" class="text-2xl font-bold text-gray-800">Sign In</h2>
+                <button onclick="closeAuthModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="flex gap-2 mb-6">
+                <button onclick="switchAuthMode('login')" id="loginTab" class="flex-1 py-2 rounded-lg font-semibold bg-gradient-to-r from-pink-500 to-purple-600 text-white">
+                    Login
+                </button>
+                <button onclick="switchAuthMode('register')" id="registerTab" class="flex-1 py-2 rounded-lg font-semibold bg-gray-100 text-gray-700">
+                    Register
+                </button>
+            </div>
+            
+            <form id="authForm" class="space-y-4">
+                <!-- Form fields will be dynamically loaded -->
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/posts.js"></script>
+    <script src="/static/js/messages.js"></script>
+    <script src="/static/js/events.js"></script>
+    <script src="/static/js/affiliates.js"></script>
+    <script src="/static/js/subscriptions.js"></script>
+    <script src="/static/js/admin.js"></script>
+</body>
+</html>

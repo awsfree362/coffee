@@ -1,0 +1,556 @@
+/* Coffee Platform - Complete Styles */
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #ec4899, #9333ea);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #db2777, #7e22ce);
+}
+
+/* Smooth Scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.animate-fadeIn {
+    animation: fadeIn 0.5s ease-out;
+}
+
+.animate-slideInRight {
+    animation: slideInRight 0.3s ease-out;
+}
+
+.animate-slideInLeft {
+    animation: slideInLeft 0.3s ease-out;
+}
+
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+.animate-bounce {
+    animation: bounce 1s ease-in-out infinite;
+}
+
+/* Gradient Text */
+.gradient-text {
+    background: linear-gradient(135deg, #ec4899, #9333ea);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Glass Morphism */
+.glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.glass-dark {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Card Hover Effects */
+.card-hover {
+    transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Button Styles */
+.btn-primary {
+    background: linear-gradient(135deg, #ec4899, #9333ea);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(236, 72, 153, 0.3);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-secondary {
+    background: white;
+    color: #ec4899;
+    padding: 0.75rem 1.5rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: 2px solid #ec4899;
+    cursor: pointer;
+}
+
+.btn-secondary:hover {
+    background: #fdf2f8;
+}
+
+/* Input Styles */
+.input-field {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 0.75rem;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: #ec4899;
+    box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.1);
+}
+
+/* TikTok-Style Posts Feed */
+.posts-container {
+    scroll-snap-type: y mandatory;
+    overflow-y: scroll;
+    height: calc(100vh - 200px);
+    -webkit-overflow-scrolling: touch;
+}
+
+.post-item {
+    scroll-snap-align: start;
+    height: calc(100vh - 200px);
+    position: relative;
+}
+
+.post-video, .post-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 1rem;
+}
+
+/* WhatsApp-Style Messages */
+.message-bubble {
+    max-width: 70%;
+    padding: 0.75rem 1rem;
+    border-radius: 1rem;
+    margin-bottom: 0.5rem;
+    word-wrap: break-word;
+}
+
+.message-sent {
+    background: linear-gradient(135deg, #ec4899, #9333ea);
+    color: white;
+    margin-left: auto;
+    border-bottom-right-radius: 0.25rem;
+}
+
+.message-received {
+    background: #f3f4f6;
+    color: #1f2937;
+    margin-right: auto;
+    border-bottom-left-radius: 0.25rem;
+}
+
+/* Profile Card */
+.profile-card {
+    background: white;
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.profile-card:hover {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Badge Styles */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-premium {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: white;
+}
+
+.badge-verified {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+}
+
+.badge-featured {
+    background: linear-gradient(135deg, #ec4899, #9333ea);
+    color: white;
+}
+
+/* Loading Spinner */
+.spinner {
+    border: 3px solid #f3f4f6;
+    border-top: 3px solid #ec4899;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+/* Toast Notifications */
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: white;
+    padding: 1rem 1.5rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    z-index: 9999;
+    animation: slideInRight 0.3s ease-out;
+}
+
+.toast-success {
+    border-left: 4px solid #10b981;
+}
+
+.toast-error {
+    border-left: 4px solid #ef4444;
+}
+
+.toast-info {
+    border-left: 4px solid #3b82f6;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+
+/* Prevent body scroll when modal is open */
+body.modal-open {
+    overflow: hidden;
+}
+
+/* QR Code Container */
+.qr-container {
+    background: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+/* Event Card */
+.event-card {
+    background: white;
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.event-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.event-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+/* Affiliate Dashboard */
+.stats-card {
+    background: linear-gradient(135deg, #ec4899, #9333ea);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Search Bar */
+.search-bar {
+    position: relative;
+    width: 100%;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 3rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 9999px;
+    transition: all 0.3s ease;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #ec4899;
+    box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.1);
+}
+
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+}
+
+/* Subscription Plans */
+.plan-card {
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 1.5rem;
+    padding: 2rem;
+    transition: all 0.3s ease;
+}
+
+.plan-card:hover {
+    border-color: #ec4899;
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(236, 72, 153, 0.1);
+}
+
+.plan-card.featured {
+    border-color: #ec4899;
+    background: linear-gradient(135deg, #fdf2f8, #fae8ff);
+}
+
+/* File Upload */
+.file-upload {
+    border: 2px dashed #e5e7eb;
+    border-radius: 1rem;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.file-upload:hover {
+    border-color: #ec4899;
+    background: #fdf2f8;
+}
+
+.file-upload.dragover {
+    border-color: #ec4899;
+    background: #fdf2f8;
+}
+
+/* Progress Bar */
+.progress-bar {
+    width: 100%;
+    height: 0.5rem;
+    background: #e5e7eb;
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ec4899, #9333ea);
+    transition: width 0.3s ease;
+}
+
+/* Avatar */
+.avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.avatar-lg {
+    width: 80px;
+    height: 80px;
+}
+
+.avatar-xl {
+    width: 120px;
+    height: 120px;
+}
+
+/* Online Status */
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid white;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+}
+
+.status-online {
+    background: #10b981;
+}
+
+.status-offline {
+    background: #6b7280;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .posts-container {
+        height: calc(100vh - 150px);
+    }
+    
+    .post-item {
+        height: calc(100vh - 150px);
+    }
+    
+    .message-bubble {
+        max-width: 85%;
+    }
+    
+    .toast {
+        bottom: 5rem;
+        right: 1rem;
+        left: 1rem;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .glass {
+        background: rgba(0, 0, 0, 0.7);
+    }
+}
+
+/* Print Styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+}
+
+/* Accessibility */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* Focus Visible */
+*:focus-visible {
+    outline: 2px solid #ec4899;
+    outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+    background: #ec4899;
+    color: white;
+}
+
+::-moz-selection {
+    background: #ec4899;
+    color: white;
+}
