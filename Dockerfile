@@ -24,7 +24,7 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt && \
-    pip install gunicorn gevent
+    pip install gunicorn
 
 # Copy application
 COPY . .
@@ -41,4 +41,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:5000/health')"
 
 # Run application
-CMD ["gunicorn", "--worker-class", "eventlet", "-w", "4", "--bind", "0.0.0.0:5000", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-", "app:app"]
+CMD ["gunicorn", "-w", "4", "--bind", "0.0.0.0:5000", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-", "app:app"]
