@@ -16,7 +16,7 @@ app.config['UPLOAD_FOLDER'] = os.getenv('UPLOAD_FOLDER', 'uploads')
 
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 jwt = JWTManager(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 
 # Redis connection
 redis_client = redis.from_url(os.getenv('REDIS_URL'))
