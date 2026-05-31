@@ -124,7 +124,7 @@ function showPage(pageName) {
                 showAuthModal();
                 return;
             }
-            renderProfilePage();
+            renderMyProfilePage();
             break;
         case 'affiliates':
             if (!currentUser) {

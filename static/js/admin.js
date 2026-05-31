@@ -1,6 +1,6 @@
 // Profile & Admin Module
 
-async function renderProfilePage() {
+async function renderMyProfilePage() {
     const mainContent = document.getElementById('mainContent');
     
     mainContent.innerHTML = `
@@ -173,7 +173,7 @@ async function updateProfile(e) {
             document.querySelector('.fixed').remove();
             showNotification('Profile updated!', 'success');
             checkAuth();
-            renderProfilePage();
+            renderMyProfilePage();
         } else {
             showNotification('Update failed', 'error');
         }
