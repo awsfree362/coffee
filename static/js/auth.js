@@ -151,12 +151,6 @@ function showVisitorSignup() {
                 </select>
             </div>
             
-            <div>
-                <label class="block text-gray-700 font-semibold mb-2">Referral Code (Optional)</label>
-                <input type="text" id="regReferralCode" class="input-field" placeholder="Enter referral code">
-                <p class="text-xs text-gray-500 mt-1">💰 Get 20% commission on referrals!</p>
-            </div>
-            
             <input type="hidden" id="regUserType" value="visitor">
             
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
