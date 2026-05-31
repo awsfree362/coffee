@@ -38,11 +38,13 @@ def serve_upload(filename):
 # Import and register blueprints
 try:
     from routes import (auth, users, posts, messages, subscriptions, affiliates, 
-                       events, payments, analytics, notifications, admin, search, bookings)
+                       events, payments, analytics, notifications, admin, search, bookings, reels, follows)
     
     app.register_blueprint(auth.bp)
     app.register_blueprint(users.bp)
     app.register_blueprint(posts.bp)
+    app.register_blueprint(reels.bp)
+    app.register_blueprint(follows.bp)
     app.register_blueprint(messages.bp)
     app.register_blueprint(subscriptions.bp)
     app.register_blueprint(affiliates.bp)
@@ -63,6 +65,7 @@ if __name__ == '__main__':
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'profiles'), exist_ok=True)
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'posts'), exist_ok=True)
+    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'reels'), exist_ok=True)
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'messages'), exist_ok=True)
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'events'), exist_ok=True)
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'payments'), exist_ok=True)

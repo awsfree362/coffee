@@ -1,35 +1,46 @@
-// Posts Module - TikTok Style Feed
+// Posts Module - Instagram Style Feed (from followed users)
 async function renderPostsPage() {
     const mainContent = document.getElementById('mainContent');
     
     mainContent.innerHTML = `
-        <div class="max-w-2xl mx-auto">
+        <div class="max-w-2xl mx-auto px-4">
             <div class="flex justify-between items-center mb-6">
                 <h1 class="text-2xl font-bold">Posts Feed</h1>
-                ${currentUser ? `
+                ${currentUser && currentUser.user_type !== 'visitor' ? `
                     <button onclick="showCreatePostModal()" class="btn-primary">
                         <i class="fas fa-plus mr-2"></i>Create Post
                     </button>
                 ` : ''}
             </div>
             
-            <div id="postsContainer" class="posts-container">
-                <div class="text-center py-8">
-                    <div class="spinner mx-auto"></div>
+            ${!currentUser ? `
+                <div class="text-center py-12">
+                    <i class="fas fa-lock text-6xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500 mb-4">Sign in to see posts from people you follow</p>
+                    <button onclick="showAuthModal()" class="btn-primary">
+                        <i class="fas fa-sign-in-alt mr-2"></i>Sign In
+                    </button>
                 </div>
-            </div>
+            ` : `
+                <div id="postsContainer" class="space-y-6">
+                    <div class="text-center py-8">
+                        <div class="spinner mx-auto"></div>
+                    </div>
+                </div>
+            `}
         </div>
     `;
     
-    loadPosts();
+    if (currentUser) {
+        loadPosts();
+    }
 }
 
 async function loadPosts() {
     try {
-        const headers = {};
-        if (currentUser) {
-            headers['Authorization'] = `Bearer ${localStorage.getItem('token')}`;
-        }
+        const headers = {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        };
         
         const response = await fetch(`${API_BASE}/posts/feed`, { headers });
         const data = await response.json();
@@ -38,7 +49,15 @@ async function loadPosts() {
         if (data.posts && data.posts.length > 0) {
             container.innerHTML = data.posts.map(post => renderPost(post)).join('');
         } else {
-            container.innerHTML = '<p class="text-gray-500 text-center py-8">No posts yet</p>';
+            container.innerHTML = `
+                <div class="text-center py-12">
+                    <i class="fas fa-user-friends text-6xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500 mb-4">No posts yet. Follow people to see their posts here!</p>
+                    <button onclick="showPage('search')" class="btn-primary">
+                        <i class="fas fa-search mr-2"></i>Find People to Follow
+                    </button>
+                </div>
+            `;
         }
     } catch (error) {
         console.error('Failed to load posts:', error);
@@ -50,54 +69,57 @@ function renderPost(post) {
     const isLiked = post.user_liked || false;
     
     return `
-        <div class="post-item bg-white rounded-2xl overflow-hidden shadow-lg mb-4">
-            <div class="relative">
-                ${post.media_type === 'video' ? `
-                    <video class="post-video" controls>
-                        <source src="/${post.media_url}" type="video/mp4">
-                    </video>
-                ` : `
-                    <img src="/${post.media_url}" alt="Post" class="post-image">
-                `}
-                
-                <!-- Post Actions Overlay -->
-                <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent text-white">
-                    <div class="flex items-start justify-between mb-3">
-                        <div class="flex items-center gap-3">
-                            <img src="${post.user_profile_image ? '/' + post.user_profile_image : `https://ui-avatars.com/api/?name=${encodeURIComponent(post.username)}&background=ec4899&color=fff`}" 
-                                 alt="${post.username}" 
-                                 class="avatar cursor-pointer"
-                                 onclick="viewProfile(${post.user_id})">
-                            <div>
-                                <p class="font-bold">${post.username}</p>
-                                <p class="text-xs opacity-75">${formatDate(post.created_at)}</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    ${post.caption ? `<p class="mb-3">${post.caption}</p>` : ''}
-                    
-                    <div class="flex items-center gap-6">
-                        <button onclick="toggleLike(${post.id})" class="flex items-center gap-2 hover:scale-110 transition" id="likeBtn-${post.id}">
-                            <i class="fas fa-heart ${isLiked ? 'text-red-500' : ''}"></i>
-                            <span id="likeCount-${post.id}">${post.likes_count || 0}</span>
-                        </button>
-                        
-                        <button onclick="showComments(${post.id})" class="flex items-center gap-2 hover:scale-110 transition">
-                            <i class="fas fa-comment"></i>
-                            <span>${post.comments_count || 0}</span>
-                        </button>
-                        
-                        <button class="flex items-center gap-2 hover:scale-110 transition">
-                            <i class="fas fa-eye"></i>
-                            <span>${post.views_count || 0}</span>
-                        </button>
-                        
-                        <button onclick="sharePost(${post.id})" class="flex items-center gap-2 hover:scale-110 transition ml-auto">
-                            <i class="fas fa-share"></i>
-                        </button>
+        <div class="bg-white rounded-2xl overflow-hidden shadow-lg">
+            <div class="p-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <img src="${post.profile_image_url ? '/' + post.profile_image_url : `https://ui-avatars.com/api/?name=${encodeURIComponent(post.username)}&background=ec4899&color=fff`}" 
+                         alt="${post.username}" 
+                         class="avatar cursor-pointer"
+                         onclick="viewProfile(${post.user_id})">
+                    <div>
+                        <p class="font-bold">${post.username}</p>
+                        <p class="text-xs text-gray-500">${formatDate(post.created_at)}</p>
                     </div>
                 </div>
+                <button class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-ellipsis-h"></i>
+                </button>
+            </div>
+            
+            ${post.media_type === 'video' ? `
+                <video class="w-full" controls>
+                    <source src="/${post.media_url}" type="video/mp4">
+                </video>
+            ` : `
+                <img src="/${post.media_url}" alt="Post" class="w-full">
+            `}
+            
+            <div class="p-4">
+                <div class="flex items-center gap-6 mb-3">
+                    <button onclick="toggleLike(${post.id})" class="flex items-center gap-2 hover:scale-110 transition" id="likeBtn-${post.id}">
+                        <i class="fas fa-heart text-2xl ${isLiked ? 'text-red-500' : 'text-gray-700'}"></i>
+                    </button>
+                    
+                    <button onclick="showComments(${post.id})" class="flex items-center gap-2 hover:scale-110 transition">
+                        <i class="fas fa-comment text-2xl text-gray-700"></i>
+                    </button>
+                    
+                    <button onclick="sharePost(${post.id})" class="flex items-center gap-2 hover:scale-110 transition ml-auto">
+                        <i class="fas fa-share text-2xl text-gray-700"></i>
+                    </button>
+                </div>
+                
+                <p class="font-bold mb-1"><span id="likeCount-${post.id}">${post.likes_count || 0}</span> likes</p>
+                
+                ${post.caption ? `
+                    <p class="mb-2"><span class="font-bold">${post.username}</span> ${post.caption}</p>
+                ` : ''}
+                
+                ${post.comments_count > 0 ? `
+                    <button onclick="showComments(${post.id})" class="text-gray-500 text-sm">
+                        View all ${post.comments_count} comments
+                    </button>
+                ` : ''}
             </div>
         </div>
     `;

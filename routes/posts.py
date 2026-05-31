@@ -112,21 +112,28 @@ def create_post():
     return jsonify({'message': 'Post created', 'post_id': post_id}), 201
 
 @bp.route('/feed', methods=['GET'])
+@jwt_required(optional=True)
 def get_feed():
+    current_user_id = get_jwt_identity()
     page = int(request.args.get('page', 1))
     limit = int(request.args.get('limit', 20))
     offset = (page - 1) * limit
     
-    posts = execute_query(
-        '''SELECT p.*, u.username, u.profile_image_url, u.user_type
-           FROM posts p
-           JOIN users u ON p.user_id = u.id
-           WHERE p.is_active = TRUE
-           ORDER BY p.created_at DESC
-           LIMIT %s OFFSET %s''',
-        (limit, offset),
-        fetch=True
-    )
+    # Get posts from followed users only
+    if current_user_id:
+        posts = execute_query(
+            '''SELECT p.*, u.username, u.profile_image_url, u.user_type
+               FROM posts p
+               JOIN users u ON p.user_id = u.id
+               JOIN follows f ON p.user_id = f.following_id
+               WHERE p.is_active = TRUE AND f.follower_id = %s
+               ORDER BY p.created_at DESC
+               LIMIT %s OFFSET %s''',
+            (current_user_id, limit, offset),
+            fetch=True
+        )
+    else:
+        posts = []
     
     return jsonify({'posts': posts, 'page': page}), 200
 

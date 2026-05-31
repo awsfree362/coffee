@@ -106,6 +106,9 @@ function showPage(pageName) {
         case 'posts':
             renderPostsPage();
             break;
+        case 'reels':
+            renderReelsPage();
+            break;
         case 'inbox':
             if (!currentUser) {
                 showAuthModal();
@@ -158,75 +161,84 @@ function showPage(pageName) {
 async function renderHomePage() {
     const mainContent = document.getElementById('mainContent');
     
-    mainContent.innerHTML = `
-        <div class="w-full px-4">
-            <!-- Hero Section with Google Ads -->
-            <div class="glass rounded-3xl p-8 md:p-12 mb-8 text-center">
-                <!-- Google AdSense Display Ad -->
-                <div class="bg-gray-100 rounded-2xl p-6 mb-6 min-h-[250px] flex items-center justify-center">
-                    <ins class="adsbygoogle"
-                         style="display:block"
-                         data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-                         data-ad-slot="XXXXXXXXXX"
-                         data-ad-format="auto"
-                         data-full-width-responsive="true"></ins>
-                    <script>
-                         (adsbygoogle = window.adsbygoogle || []).push({});
-                    </script>
-                    <!-- Placeholder text (remove when ads are active) -->
-                    <div class="text-gray-400 text-center">
-                        <i class="fas fa-ad text-4xl mb-2"></i>
-                        <p>Advertisement Space</p>
-                        <p class="text-sm">Replace with your Google AdSense code</p>
+    // Check if mobile device
+    const isMobile = window.innerWidth < 768;
+    
+    if (isMobile) {
+        // Mobile: Show TikTok-style reels feed
+        renderReelsPage();
+    } else {
+        // Desktop: Show original home page
+        mainContent.innerHTML = `
+            <div class="w-full px-4">
+                <!-- Hero Section with Google Ads -->
+                <div class="glass rounded-3xl p-8 md:p-12 mb-8 text-center">
+                    <!-- Google AdSense Display Ad -->
+                    <div class="bg-gray-100 rounded-2xl p-6 mb-6 min-h-[250px] flex items-center justify-center">
+                        <ins class="adsbygoogle"
+                             style="display:block"
+                             data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+                             data-ad-slot="XXXXXXXXXX"
+                             data-ad-format="auto"
+                             data-full-width-responsive="true"></ins>
+                        <script>
+                             (adsbygoogle = window.adsbygoogle || []).push({});
+                        </script>
+                        <!-- Placeholder text (remove when ads are active) -->
+                        <div class="text-gray-400 text-center">
+                            <i class="fas fa-ad text-4xl mb-2"></i>
+                            <p>Advertisement Space</p>
+                            <p class="text-sm">Replace with your Google AdSense code</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-4 justify-center">
+                        <button onclick="showPage('search')" class="btn-primary">
+                            <i class="fas fa-search mr-2"></i>Browse Profiles
+                        </button>
+                        ${!currentUser ? `
+                            <button onclick="showAuthModal()" class="btn-secondary">
+                                <i class="fas fa-user-plus mr-2"></i>Join Now
+                            </button>
+                        ` : ''}
                     </div>
                 </div>
                 
-                <div class="flex flex-wrap gap-4 justify-center">
-                    <button onclick="showPage('search')" class="btn-primary">
-                        <i class="fas fa-search mr-2"></i>Browse Profiles
-                    </button>
-                    ${!currentUser ? `
-                        <button onclick="showAuthModal()" class="btn-secondary">
-                            <i class="fas fa-user-plus mr-2"></i>Join Now
+                <!-- Online Now Escorts -->
+                <div class="mb-8 max-w-7xl mx-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold">🟢 Online Now</h2>
+                        <button onclick="showPage('search')" class="text-pink-500 hover:text-pink-600">
+                            View All <i class="fas fa-arrow-right ml-1"></i>
                         </button>
-                    ` : ''}
+                    </div>
+                    <div id="onlineEscorts" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="text-center py-8">
+                            <div class="spinner mx-auto"></div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            
-            <!-- Online Now Escorts -->
-            <div class="mb-8 max-w-7xl mx-auto">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold">🟢 Online Now</h2>
-                    <button onclick="showPage('search')" class="text-pink-500 hover:text-pink-600">
-                        View All <i class="fas fa-arrow-right ml-1"></i>
-                    </button>
-                </div>
-                <div id="onlineEscorts" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="text-center py-8">
-                        <div class="spinner mx-auto"></div>
+                
+                <!-- Upcoming Events -->
+                <div id="eventsSection" class="max-w-7xl mx-auto" style="display: none;">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold">Upcoming Events</h2>
+                        <button onclick="showPage('events')" class="text-pink-500 hover:text-pink-600">
+                            View All <i class="fas fa-arrow-right ml-1"></i>
+                        </button>
+                    </div>
+                    <div id="upcomingEvents" class="grid md:grid-cols-3 gap-6">
+                        <div class="text-center py-8">
+                            <div class="spinner mx-auto"></div>
+                        </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Upcoming Events -->
-            <div id="eventsSection" class="max-w-7xl mx-auto" style="display: none;">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold">Upcoming Events</h2>
-                    <button onclick="showPage('events')" class="text-pink-500 hover:text-pink-600">
-                        View All <i class="fas fa-arrow-right ml-1"></i>
-                    </button>
-                </div>
-                <div id="upcomingEvents" class="grid md:grid-cols-3 gap-6">
-                    <div class="text-center py-8">
-                        <div class="spinner mx-auto"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    loadOnlineEscorts();
-    loadUpcomingEvents();
+        `;
+        
+        loadOnlineEscorts();
+        loadUpcomingEvents();
+    }
 }
 
 async function loadOnlineEscorts() {
