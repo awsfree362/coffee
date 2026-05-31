@@ -454,7 +454,7 @@ async function viewProfile(userId) {
         const data = await response.json();
         
         if (data.user) {
-            showProfileModal(data.user);
+            renderProfilePage(data.user);
         }
     } catch (error) {
         console.error('Failed to load profile:', error);
@@ -462,51 +462,272 @@ async function viewProfile(userId) {
     }
 }
 
-function showProfileModal(user) {
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
-    modal.onclick = (e) => {
-        if (e.target === modal) modal.remove();
-    };
+function renderProfilePage(user) {
+    const mainContent = document.getElementById('mainContent');
     
-    modal.innerHTML = `
-        <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div class="relative">
-                <img src="${user.profile_image_url ? '/' + user.profile_image_url : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=ec4899&color=fff&size=400`}" 
-                     alt="${user.username}" 
-                     class="w-full h-64 object-cover">
-                <button onclick="this.closest('.fixed').remove()" class="absolute top-4 right-4 bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg">
-                    <i class="fas fa-times"></i>
-                </button>
-                ${user.is_verified ? '<span class="badge badge-verified absolute top-4 left-4"><i class="fas fa-check-circle mr-1"></i>Verified</span>' : ''}
+    mainContent.innerHTML = `
+        <div class="max-w-4xl mx-auto px-4">
+            <!-- Profile Header -->
+            <div class="bg-white rounded-3xl shadow-lg overflow-hidden mb-6">
+                <div class="h-32 bg-gradient-to-r from-pink-500 to-purple-600"></div>
+                <div class="px-6 pb-6">
+                    <div class="flex flex-col md:flex-row items-center md:items-end gap-6 -mt-16">
+                        <img src="${user.profile_image_url ? '/' + user.profile_image_url : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=ec4899&color=fff&size=200`}" 
+                             class="avatar-xl border-4 border-white shadow-lg">
+                        <div class="flex-1 text-center md:text-left">
+                            <h1 class="text-3xl font-bold">${user.username}</h1>
+                            <p class="text-gray-600 capitalize">${user.user_type}</p>
+                            ${user.is_verified ? '<span class="badge badge-verified mt-2"><i class="fas fa-check-circle mr-1"></i>Verified</span>' : ''}
+                        </div>
+                        <div class="flex gap-3">
+                            ${currentUser && currentUser.id !== user.id ? `
+                                <button onclick="toggleFollow(${user.id})" id="followBtn-${user.id}" class="btn-primary">
+                                    <i class="fas fa-user-plus mr-2"></i>Follow
+                                </button>
+                                <button onclick="startConversation(${user.id})" class="btn-secondary">
+                                    <i class="fas fa-comment mr-2"></i>Message
+                                </button>
+                            ` : ''}
+                            ${currentUser && currentUser.id === user.id ? `
+                                <button onclick="showEditProfileModal()" class="btn-primary">
+                                    <i class="fas fa-edit mr-2"></i>Edit Profile
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                    
+                    <!-- Stats -->
+                    <div class="flex gap-8 justify-center md:justify-start mt-6" id="profileStats-${user.id}">
+                        <div class="text-center">
+                            <p class="text-2xl font-bold" id="followersCount-${user.id}">0</p>
+                            <p class="text-gray-600 text-sm">Followers</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-2xl font-bold" id="followingCount-${user.id}">0</p>
+                            <p class="text-gray-600 text-sm">Following</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Bio -->
+                    ${user.bio ? `
+                        <div class="mt-6">
+                            <p class="text-gray-700">${user.bio}</p>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Info -->
+                    <div class="grid grid-cols-2 gap-4 mt-6">
+                        ${user.ethnicity ? `<div><span class="text-gray-500">Ethnicity:</span> <span class="font-semibold">${user.ethnicity}</span></div>` : ''}
+                        ${user.city ? `<div><span class="text-gray-500">City:</span> <span class="font-semibold">${user.city}</span></div>` : ''}
+                        ${user.phone && currentUser ? `<div><span class="text-gray-500">Phone:</span> <span class="font-semibold">${user.phone}</span></div>` : ''}
+                    </div>
+                </div>
             </div>
             
-            <div class="p-6">
-                <h2 class="text-3xl font-bold mb-2">${user.username}</h2>
-                <p class="text-gray-600 mb-4 capitalize">${user.user_type}</p>
-                
-                ${user.bio ? `<p class="text-gray-700 mb-4">${user.bio}</p>` : ''}
-                
-                <div class="grid grid-cols-2 gap-4 mb-6">
-                    ${user.ethnicity ? `<div><span class="text-gray-500">Ethnicity:</span> <span class="font-semibold">${user.ethnicity}</span></div>` : ''}
-                    ${user.phone ? `<div><span class="text-gray-500">Phone:</span> <span class="font-semibold">${user.phone}</span></div>` : ''}
-                </div>
-                
-                <div class="flex gap-4">
-                    ${currentUser && currentUser.id !== user.id ? `
-                        <button onclick="startConversation(${user.id})" class="btn-primary flex-1">
-                            <i class="fas fa-comment mr-2"></i>Message
+            <!-- Content Tabs -->
+            ${user.user_type !== 'visitor' ? `
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+                    <div class="flex border-b">
+                        <button onclick="switchProfileTab(${user.id}, 'posts')" id="profilePostsTab-${user.id}" class="flex-1 px-6 py-4 font-semibold border-b-2 border-pink-500 text-pink-500">
+                            <i class="fas fa-th mr-2"></i>Posts
                         </button>
-                    ` : ''}
-                    <button onclick="this.closest('.fixed').remove()" class="btn-secondary flex-1">
-                        Close
-                    </button>
+                        <button onclick="switchProfileTab(${user.id}, 'reels')" id="profileReelsTab-${user.id}" class="flex-1 px-6 py-4 font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-video mr-2"></i>Reels
+                        </button>
+                    </div>
+                    
+                    <div id="profileContent-${user.id}" class="p-6">
+                        <div class="text-center py-8">
+                            <div class="spinner mx-auto"></div>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            ` : ''}
         </div>
     `;
     
-    document.body.appendChild(modal);
+    // Load follow stats
+    loadFollowStats(user.id);
+    
+    // Check follow status
+    if (currentUser && currentUser.id !== user.id) {
+        checkFollowStatus(user.id);
+    }
+    
+    // Load posts by default
+    if (user.user_type !== 'visitor') {
+        loadProfilePosts(user.id);
+    }
+}
+
+let currentProfileTab = {};
+
+function switchProfileTab(userId, tab) {
+    currentProfileTab[userId] = tab;
+    
+    // Update tab styles
+    document.getElementById(`profilePostsTab-${userId}`).className = tab === 'posts'
+        ? 'flex-1 px-6 py-4 font-semibold border-b-2 border-pink-500 text-pink-500'
+        : 'flex-1 px-6 py-4 font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700';
+    
+    document.getElementById(`profileReelsTab-${userId}`).className = tab === 'reels'
+        ? 'flex-1 px-6 py-4 font-semibold border-b-2 border-pink-500 text-pink-500'
+        : 'flex-1 px-6 py-4 font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700';
+    
+    // Load content
+    if (tab === 'posts') {
+        loadProfilePosts(userId);
+    } else {
+        loadProfileReels(userId);
+    }
+}
+
+async function loadProfilePosts(userId) {
+    try {
+        const response = await fetch(`${API_BASE}/posts/user/${userId}`);
+        const data = await response.json();
+        
+        const container = document.getElementById(`profileContent-${userId}`);
+        if (data.posts && data.posts.length > 0) {
+            container.innerHTML = `
+                <div class="grid grid-cols-3 gap-2">
+                    ${data.posts.map(post => `
+                        <div class="relative aspect-square cursor-pointer group" onclick="viewPost(${post.id})">
+                            ${post.media_type === 'video' ? `
+                                <video src="/${post.media_url}" class="w-full h-full object-cover rounded-lg"></video>
+                                <i class="fas fa-play-circle absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-3xl opacity-70"></i>
+                            ` : `
+                                <img src="/${post.media_url}" alt="Post" class="w-full h-full object-cover rounded-lg">
+                            `}
+                            <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                <div class="text-white flex gap-4">
+                                    <span><i class="fas fa-heart mr-1"></i>${post.likes_count}</span>
+                                    <span><i class="fas fa-comment mr-1"></i>${post.comments_count}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } else {
+            container.innerHTML = '<p class="text-gray-500 text-center py-12">No posts yet</p>';
+        }
+    } catch (error) {
+        console.error('Failed to load posts:', error);
+    }
+}
+
+async function loadProfileReels(userId) {
+    try {
+        const response = await fetch(`${API_BASE}/reels/user/${userId}`);
+        const data = await response.json();
+        
+        const container = document.getElementById(`profileContent-${userId}`);
+        if (data.reels && data.reels.length > 0) {
+            container.innerHTML = `
+                <div class="grid grid-cols-3 gap-2">
+                    ${data.reels.map(reel => `
+                        <div class="relative aspect-square cursor-pointer group" onclick="viewReel(${reel.id})">
+                            <video src="/${reel.video_url}" class="w-full h-full object-cover rounded-lg"></video>
+                            <i class="fas fa-play-circle absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-3xl opacity-70"></i>
+                            <div class="absolute top-2 right-2 bg-pink-500 text-white text-xs px-2 py-1 rounded-full">
+                                <i class="fas fa-video"></i>
+                            </div>
+                            <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                <div class="text-white flex gap-4">
+                                    <span><i class="fas fa-heart mr-1"></i>${reel.likes_count}</span>
+                                    <span><i class="fas fa-comment mr-1"></i>${reel.comments_count}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } else {
+            container.innerHTML = '<p class="text-gray-500 text-center py-12">No reels yet</p>';
+        }
+    } catch (error) {
+        console.error('Failed to load reels:', error);
+    }
+}
+
+async function loadFollowStats(userId) {
+    try {
+        const response = await fetch(`${API_BASE}/follows/stats/${userId}`);
+        const data = await response.json();
+        
+        document.getElementById(`followersCount-${userId}`).textContent = data.followers_count || 0;
+        document.getElementById(`followingCount-${userId}`).textContent = data.following_count || 0;
+    } catch (error) {
+        console.error('Failed to load follow stats:', error);
+    }
+}
+
+async function checkFollowStatus(userId) {
+    try {
+        const response = await fetch(`${API_BASE}/follows/status/${userId}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        const data = await response.json();
+        
+        const btn = document.getElementById(`followBtn-${userId}`);
+        if (btn) {
+            if (data.following) {
+                btn.innerHTML = '<i class="fas fa-user-check mr-2"></i>Following';
+                btn.className = 'btn-secondary';
+            } else {
+                btn.innerHTML = '<i class="fas fa-user-plus mr-2"></i>Follow';
+                btn.className = 'btn-primary';
+            }
+        }
+    } catch (error) {
+        console.error('Failed to check follow status:', error);
+    }
+}
+
+async function toggleFollow(userId) {
+    if (!currentUser) {
+        showAuthModal();
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/follows/follow/${userId}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            const btn = document.getElementById(`followBtn-${userId}`);
+            if (data.following) {
+                btn.innerHTML = '<i class="fas fa-user-check mr-2"></i>Following';
+                btn.className = 'btn-secondary';
+                showNotification('Following!', 'success');
+            } else {
+                btn.innerHTML = '<i class="fas fa-user-plus mr-2"></i>Follow';
+                btn.className = 'btn-primary';
+                showNotification('Unfollowed', 'info');
+            }
+            loadFollowStats(userId);
+        }
+    } catch (error) {
+        console.error('Failed to toggle follow:', error);
+        showNotification('Failed to update follow status', 'error');
+    }
+}
+
+function viewPost(postId) {
+    showNotification('Opening post...', 'info');
+}
+
+function viewReel(reelId) {
+    showNotification('Opening reel...', 'info');
 }
 
 // Notifications
