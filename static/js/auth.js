@@ -417,8 +417,8 @@ async function handleRegister(e) {
     const idDocument = document.getElementById('regIDDocument')?.files[0];
     if (idDocument) formData.append('id_document', idDocument);
     
-    const referralCode = document.getElementById('regReferralCode').value;
-    if (referralCode) formData.append('referral_code', referralCode);
+    const referralCode = document.getElementById('regReferralCode');
+    if (referralCode && referralCode.value) formData.append('referral_code', referralCode.value);
     
     const submitBtn = e.target.querySelector('button[type="submit"]');
     submitBtn.disabled = true;

@@ -145,8 +145,8 @@ def search_users():
     limit = int(request.args.get('limit', 20))
     offset = (page - 1) * limit
     
-    # Build query conditions
-    conditions = ['is_active = TRUE']
+    # Build query conditions - exclude visitors from search
+    conditions = ['is_active = TRUE', "user_type != 'visitor'"]
     params = []
     
     if user_type:
