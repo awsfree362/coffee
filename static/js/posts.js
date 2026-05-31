@@ -13,34 +13,23 @@ async function renderPostsPage() {
                 ` : ''}
             </div>
             
-            ${!currentUser ? `
-                <div class="text-center py-12">
-                    <i class="fas fa-lock text-6xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500 mb-4">Sign in to see posts from people you follow</p>
-                    <button onclick="showAuthModal()" class="btn-primary">
-                        <i class="fas fa-sign-in-alt mr-2"></i>Sign In
-                    </button>
+            <div id="postsContainer" class="space-y-6">
+                <div class="text-center py-8">
+                    <div class="spinner mx-auto"></div>
                 </div>
-            ` : `
-                <div id="postsContainer" class="space-y-6">
-                    <div class="text-center py-8">
-                        <div class="spinner mx-auto"></div>
-                    </div>
-                </div>
-            `}
+            </div>
         </div>
     `;
     
-    if (currentUser) {
-        loadPosts();
-    }
+    loadPosts();
 }
 
 async function loadPosts() {
     try {
-        const headers = {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-        };
+        const headers = {};
+        if (currentUser) {
+            headers['Authorization'] = `Bearer ${localStorage.getItem('token')}`;
+        }
         
         const response = await fetch(`${API_BASE}/posts/feed`, { headers });
         const data = await response.json();
@@ -51,11 +40,13 @@ async function loadPosts() {
         } else {
             container.innerHTML = `
                 <div class="text-center py-12">
-                    <i class="fas fa-user-friends text-6xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500 mb-4">No posts yet. Follow people to see their posts here!</p>
-                    <button onclick="showPage('search')" class="btn-primary">
-                        <i class="fas fa-search mr-2"></i>Find People to Follow
-                    </button>
+                    <i class="fas fa-images text-6xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500 mb-4">No posts yet</p>
+                    ${currentUser && currentUser.user_type !== 'visitor' ? `
+                        <button onclick="showCreatePostModal()" class="btn-primary">
+                            <i class="fas fa-plus mr-2"></i>Create First Post
+                        </button>
+                    ` : ''}
                 </div>
             `;
         }

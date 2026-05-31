@@ -119,21 +119,52 @@ def get_feed():
     limit = int(request.args.get('limit', 20))
     offset = (page - 1) * limit
     
-    # Get posts from followed users only
+    # Get posts from followed users, or all posts if not logged in
     if current_user_id:
+        # Check if user is following anyone
+        following_count = execute_query(
+            'SELECT COUNT(*) as count FROM follows WHERE follower_id = %s',
+            (current_user_id,),
+            fetch_one=True
+        )['count']
+        
+        if following_count > 0:
+            # Show posts from followed users
+            posts = execute_query(
+                '''SELECT p.*, u.username, u.profile_image_url, u.user_type
+                   FROM posts p
+                   JOIN users u ON p.user_id = u.id
+                   JOIN follows f ON p.user_id = f.following_id
+                   WHERE p.is_active = TRUE AND f.follower_id = %s
+                   ORDER BY p.created_at DESC
+                   LIMIT %s OFFSET %s''',
+                (current_user_id, limit, offset),
+                fetch=True
+            )
+        else:
+            # Show all posts if not following anyone
+            posts = execute_query(
+                '''SELECT p.*, u.username, u.profile_image_url, u.user_type
+                   FROM posts p
+                   JOIN users u ON p.user_id = u.id
+                   WHERE p.is_active = TRUE
+                   ORDER BY p.created_at DESC
+                   LIMIT %s OFFSET %s''',
+                (limit, offset),
+                fetch=True
+            )
+    else:
+        # Show all posts for non-logged in users
         posts = execute_query(
             '''SELECT p.*, u.username, u.profile_image_url, u.user_type
                FROM posts p
                JOIN users u ON p.user_id = u.id
-               JOIN follows f ON p.user_id = f.following_id
-               WHERE p.is_active = TRUE AND f.follower_id = %s
+               WHERE p.is_active = TRUE
                ORDER BY p.created_at DESC
                LIMIT %s OFFSET %s''',
-            (current_user_id, limit, offset),
+            (limit, offset),
             fetch=True
         )
-    else:
-        posts = []
     
     return jsonify({'posts': posts, 'page': page}), 200
 
