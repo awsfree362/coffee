@@ -405,20 +405,20 @@ async function handleRegister(e) {
     formData.append('full_name', document.getElementById('regFullName').value);
     formData.append('date_of_birth', document.getElementById('regDOB').value);
     
-    const phone = document.getElementById('regPhone').value;
-    if (phone) formData.append('phone', phone);
+    const phone = document.getElementById('regPhone');
+    if (phone && phone.value) formData.append('phone', phone.value);
     
     const city = document.getElementById('regCity')?.value;
     if (city) formData.append('city', city);
     
-    const ethnicity = document.getElementById('regEthnicity').value;
-    if (ethnicity) formData.append('ethnicity', ethnicity);
+    const ethnicity = document.getElementById('regEthnicity');
+    if (ethnicity && ethnicity.value) formData.append('ethnicity', ethnicity.value);
     
-    const bio = document.getElementById('regBio').value;
-    if (bio) formData.append('bio', bio);
+    const bio = document.getElementById('regBio');
+    if (bio && bio.value) formData.append('bio', bio.value);
     
-    const profileImage = document.getElementById('regProfileImage').files[0];
-    if (profileImage) formData.append('profile_image', profileImage);
+    const profileImage = document.getElementById('regProfileImage');
+    if (profileImage && profileImage.files[0]) formData.append('profile_image', profileImage.files[0]);
     
     const idDocument = document.getElementById('regIDDocument')?.files[0];
     if (idDocument) formData.append('id_document', idDocument);
