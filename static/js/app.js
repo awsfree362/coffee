@@ -137,6 +137,18 @@ function showPage(pageName) {
             }
             renderSubscriptionPage();
             break;
+        case 'gallery':
+            if (!currentUser) {
+                showAuthModal();
+                return;
+            }
+            if (currentUser.user_type === 'visitor') {
+                showNotification('Gallery is only available for listers', 'error');
+                showPage('home');
+                return;
+            }
+            renderGalleryPage();
+            break;
         default:
             renderHomePage();
     }

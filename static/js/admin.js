@@ -24,13 +24,20 @@ async function renderProfilePage() {
             </div>
             
             <div class="grid md:grid-cols-3 gap-6 mb-6">
+                ${currentUser.user_type !== 'visitor' ? `
+                    <button onclick="showPage('gallery')" class="profile-card card-hover text-center">
+                        <i class="fas fa-images text-4xl text-pink-500 mb-3"></i>
+                        <h3 class="font-bold text-lg">My Gallery</h3>
+                    </button>
+                ` : ''}
+                
                 <button onclick="showPage('posts')" class="profile-card card-hover text-center">
-                    <i class="fas fa-images text-4xl text-pink-500 mb-3"></i>
-                    <h3 class="font-bold text-lg">My Posts</h3>
+                    <i class="fas fa-play-circle text-4xl text-purple-500 mb-3"></i>
+                    <h3 class="font-bold text-lg">Feed</h3>
                 </button>
                 
                 <button onclick="showPage('affiliates')" class="profile-card card-hover text-center">
-                    <i class="fas fa-users text-4xl text-purple-500 mb-3"></i>
+                    <i class="fas fa-users text-4xl text-blue-500 mb-3"></i>
                     <h3 class="font-bold text-lg">Affiliates</h3>
                 </button>
                 

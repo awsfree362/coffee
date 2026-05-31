@@ -234,6 +234,35 @@ def get_post_comments(post_id):
     
     return jsonify({'comments': comments}), 200
 
+@bp.route('/<int:post_id>/update', methods=['PUT'])
+@jwt_required()
+def update_post(post_id):
+    user_id = get_jwt_identity()
+    
+    # Check ownership
+    post = execute_query('SELECT user_id FROM posts WHERE id = %s', (post_id,), fetch_one=True)
+    if not post or post['user_id'] != user_id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    data = request.json
+    execute_query('UPDATE posts SET caption = %s WHERE id = %s', (data.get('caption'), post_id))
+    
+    return jsonify({'message': 'Post updated'}), 200
+
+@bp.route('/<int:post_id>/delete', methods=['DELETE'])
+@jwt_required()
+def delete_post(post_id):
+    user_id = get_jwt_identity()
+    
+    # Check ownership
+    post = execute_query('SELECT user_id FROM posts WHERE id = %s', (post_id,), fetch_one=True)
+    if not post or post['user_id'] != user_id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    execute_query('UPDATE posts SET is_active = FALSE WHERE id = %s', (post_id,))
+    
+    return jsonify({'message': 'Post deleted'}), 200
+
 @bp.route('/user/<int:user_id>', methods=['GET'])
 def get_user_posts(user_id):
     posts = execute_query(
