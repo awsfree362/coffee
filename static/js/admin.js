@@ -28,22 +28,26 @@ async function renderProfilePage() {
                     <button onclick="showPage('gallery')" class="profile-card card-hover text-center">
                         <i class="fas fa-images text-4xl text-pink-500 mb-3"></i>
                         <h3 class="font-bold text-lg">My Gallery</h3>
+                        <p class="text-sm text-gray-500">Manage posts & reels</p>
                     </button>
                 ` : ''}
                 
                 <button onclick="showPage('posts')" class="profile-card card-hover text-center">
-                    <i class="fas fa-play-circle text-4xl text-purple-500 mb-3"></i>
+                    <i class="fas fa-th text-4xl text-purple-500 mb-3"></i>
                     <h3 class="font-bold text-lg">Feed</h3>
+                    <p class="text-sm text-gray-500">Browse posts</p>
                 </button>
                 
                 <button onclick="showPage('affiliates')" class="profile-card card-hover text-center">
                     <i class="fas fa-users text-4xl text-blue-500 mb-3"></i>
                     <h3 class="font-bold text-lg">Affiliates</h3>
+                    <p class="text-sm text-gray-500">Earn commissions</p>
                 </button>
                 
                 <button onclick="showPage('subscription')" class="profile-card card-hover text-center">
                     <i class="fas fa-crown text-4xl text-yellow-500 mb-3"></i>
                     <h3 class="font-bold text-lg">Subscription</h3>
+                    <p class="text-sm text-gray-500">Manage plan</p>
                 </button>
             </div>
             

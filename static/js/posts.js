@@ -6,11 +6,6 @@ async function renderPostsPage() {
         <div class="max-w-2xl mx-auto px-4">
             <div class="flex justify-between items-center mb-6">
                 <h1 class="text-2xl font-bold">Posts Feed</h1>
-                ${currentUser && currentUser.user_type !== 'visitor' ? `
-                    <button onclick="showCreatePostModal()" class="btn-primary">
-                        <i class="fas fa-plus mr-2"></i>Create Post
-                    </button>
-                ` : ''}
             </div>
             
             <div id="postsContainer" class="space-y-6">
@@ -42,11 +37,6 @@ async function loadPosts() {
                 <div class="text-center py-12">
                     <i class="fas fa-images text-6xl text-gray-300 mb-4"></i>
                     <p class="text-gray-500 mb-4">No posts yet</p>
-                    ${currentUser && currentUser.user_type !== 'visitor' ? `
-                        <button onclick="showCreatePostModal()" class="btn-primary">
-                            <i class="fas fa-plus mr-2"></i>Create First Post
-                        </button>
-                    ` : ''}
                 </div>
             `;
         }
