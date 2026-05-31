@@ -9,6 +9,11 @@ bp = Blueprint('posts', __name__, url_prefix='/api/posts')
 def can_user_post(user_id):
     user = execute_query('SELECT user_type FROM users WHERE id = %s', (user_id,), fetch_one=True)
     
+    # Visitors can never post
+    if user['user_type'] == 'visitor':
+        return False
+    
+    # Escorts and venues need active subscription
     subscription = execute_query(
         '''SELECT * FROM subscriptions 
            WHERE user_id = %s AND is_active = TRUE AND payment_verified = TRUE AND end_date > NOW()
@@ -81,7 +86,11 @@ def create_post():
     user_id = get_jwt_identity()
     
     if not can_user_post(user_id):
-        return jsonify({'error': 'Active subscription required to post'}), 403
+        return jsonify({
+            'error': 'Subscription Required',
+            'message': 'You need an active subscription to create posts. Subscribe now to start posting!',
+            'redirect': '/subscription'
+        }), 403
     
     data = request.form
     files = request.files

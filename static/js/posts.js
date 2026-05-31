@@ -348,9 +348,18 @@ async function submitPost(e) {
             showNotification('Post created successfully!', 'success');
             loadPosts(); // Reload posts
         } else {
-            showNotification(data.error || 'Failed to create post', 'error');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Post';
+            // Check if subscription required
+            if (data.redirect === '/subscription') {
+                document.querySelector('.fixed').remove();
+                showNotification(data.message, 'error');
+                setTimeout(() => {
+                    showPage('subscription');
+                }, 2000);
+            } else {
+                showNotification(data.error || 'Failed to create post', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Post';
+            }
         }
     } catch (error) {
         console.error('Failed to create post:', error);
