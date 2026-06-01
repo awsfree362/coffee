@@ -18,10 +18,31 @@ async function renderInboxPage() {
                             <button onclick="showNewMessageModal()" class="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-700 transition" title="New message">
                                 <i class="fas fa-edit text-lg"></i>
                             </button>
-                            <button class="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-700 transition" title="Options">
+                            <button onclick="toggleMessengerOptions()" class="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-700 transition" title="Options">
                                 <i class="fas fa-ellipsis-h text-lg"></i>
                             </button>
                         </div>
+                    </div>
+                    
+                    <!-- Options Dropdown -->
+                    <div id="messengerOptionsMenu" class="hidden absolute right-4 top-16 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 w-56">
+                        <button onclick="showArchivedChats()" class="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-3">
+                            <i class="fas fa-archive text-gray-600"></i>
+                            <span class="text-sm font-semibold">Archived chats</span>
+                        </button>
+                        <button onclick="showMessageRequests()" class="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-3">
+                            <i class="fas fa-envelope text-gray-600"></i>
+                            <span class="text-sm font-semibold">Message requests</span>
+                        </button>
+                        <button onclick="showMessengerSettings()" class="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-3">
+                            <i class="fas fa-cog text-gray-600"></i>
+                            <span class="text-sm font-semibold">Settings</span>
+                        </button>
+                        <div class="border-t border-gray-200 my-2"></div>
+                        <button onclick="markAllAsRead()" class="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-3">
+                            <i class="fas fa-check-double text-gray-600"></i>
+                            <span class="text-sm font-semibold">Mark all as read</span>
+                        </button>
                     </div>
                     <div class="relative">
                         <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
@@ -817,4 +838,77 @@ if (socket) {
         }
         loadConversations(); // Update conversation list
     });
+}
+
+// Messenger options menu
+function toggleMessengerOptions() {
+    const menu = document.getElementById('messengerOptionsMenu');
+    if (menu.classList.contains('hidden')) {
+        menu.classList.remove('hidden');
+        // Close menu when clicking outside
+        setTimeout(() => {
+            document.addEventListener('click', closeMessengerOptions);
+        }, 100);
+    } else {
+        menu.classList.add('hidden');
+        document.removeEventListener('click', closeMessengerOptions);
+    }
+}
+
+function closeMessengerOptions(e) {
+    const menu = document.getElementById('messengerOptionsMenu');
+    if (menu && !menu.contains(e.target) && !e.target.closest('button[onclick="toggleMessengerOptions()"]')) {
+        menu.classList.add('hidden');
+        document.removeEventListener('click', closeMessengerOptions);
+    }
+}
+
+function showArchivedChats() {
+    toggleMessengerOptions();
+    showNotification('Archived chats feature coming soon', 'info');
+}
+
+function showMessageRequests() {
+    toggleMessengerOptions();
+    showNotification('Message requests feature coming soon', 'info');
+}
+
+function showMessengerSettings() {
+    toggleMessengerOptions();
+    showNotification('Messenger settings feature coming soon', 'info');
+}
+
+async function markAllAsRead() {
+    toggleMessengerOptions();
+    
+    try {
+        // Get all conversations and mark them as read
+        const response = await fetch(`${API_BASE}/messages/conversations`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.conversations) {
+            // Mark each conversation as read
+            for (const conv of data.conversations) {
+                if (conv.unread_count > 0) {
+                    await fetch(`${API_BASE}/messages/mark-read/${conv.id}`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        }
+                    });
+                }
+            }
+            
+            showNotification('All messages marked as read', 'success');
+            loadConversations();
+        }
+    } catch (error) {
+        console.error('Error marking all as read:', error);
+        showNotification('Failed to mark all as read', 'error');
+    }
 }
