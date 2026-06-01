@@ -988,8 +988,16 @@ function closeMessengerOptions(e) {
     }
 }
 
+function closeMessengerMenu() {
+    const menu = document.getElementById('messengerOptionsMenu');
+    if (menu) {
+        menu.classList.add('hidden');
+        document.removeEventListener('click', closeMessengerOptions);
+    }
+}
+
 function showArchivedChats() {
-    toggleMessengerOptions();
+    closeMessengerMenu();
     
     const mainContent = document.getElementById('mainContent');
     mainContent.innerHTML = `
@@ -1100,7 +1108,7 @@ async function unarchiveConversationFromList(conversationId) {
 }
 
 function showMessageRequests() {
-    toggleMessengerOptions();
+    closeMessengerMenu();
     
     const mainContent = document.getElementById('mainContent');
     mainContent.innerHTML = `
@@ -1210,7 +1218,7 @@ async function declineMessageRequest(userId) {
 }
 
 function showMessengerSettings() {
-    toggleMessengerOptions();
+    closeMessengerMenu();
     
     const mainContent = document.getElementById('mainContent');
     mainContent.innerHTML = `
@@ -1394,7 +1402,7 @@ function downloadMessageData() {
 }
 
 async function markAllAsRead() {
-    toggleMessengerOptions();
+    closeMessengerMenu();
     
     try {
         // Get all conversations and mark them as read
