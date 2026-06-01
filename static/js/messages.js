@@ -390,6 +390,10 @@ function toggleInfoPanel() {
 async function loadInfoPanel(userId, username, profileImage) {
     const infoPanel = document.getElementById('infoPanel');
     
+    // Get conversation ID
+    const conversation = await getConversationId(userId);
+    currentConversationId = conversation ? conversation.id : null;
+    
     infoPanel.innerHTML = `
         <div class="flex-1 overflow-y-auto">
             <!-- Profile Section -->
@@ -432,16 +436,16 @@ async function loadInfoPanel(userId, username, profileImage) {
             
             <!-- Privacy & Support -->
             <div class="bg-white border-b border-gray-200">
-                <button class="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition">
+                <button onclick="muteConversation(${currentConversationId})" class="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
                             <i class="fas fa-bell text-gray-600"></i>
                         </div>
-                        <span class="font-semibold text-gray-900">Notifications</span>
+                        <span class="font-semibold text-gray-900">Mute notifications</span>
                     </div>
                     <i class="fas fa-chevron-right text-gray-400"></i>
                 </button>
-                <button class="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition">
+                <button onclick="searchInConversation()" class="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
                             <i class="fas fa-search text-gray-600"></i>
@@ -454,19 +458,19 @@ async function loadInfoPanel(userId, username, profileImage) {
             
             <!-- More Actions -->
             <div class="bg-white">
-                <button class="w-full px-6 py-4 flex items-center gap-3 hover:bg-gray-50 transition text-left">
+                <button onclick="archiveConversation(${currentConversationId})" class="w-full px-6 py-4 flex items-center gap-3 hover:bg-gray-50 transition text-left">
                     <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
                         <i class="fas fa-archive text-gray-600"></i>
                     </div>
                     <span class="font-semibold text-gray-900">Archive chat</span>
                 </button>
-                <button class="w-full px-6 py-4 flex items-center gap-3 hover:bg-gray-50 transition text-left">
+                <button onclick="deleteConversation(${currentConversationId})" class="w-full px-6 py-4 flex items-center gap-3 hover:bg-gray-50 transition text-left">
                     <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
                         <i class="fas fa-trash text-red-600"></i>
                     </div>
                     <span class="font-semibold text-red-600">Delete chat</span>
                 </button>
-                <button class="w-full px-6 py-4 flex items-center gap-3 hover:bg-gray-50 transition text-left">
+                <button onclick="blockUser(${userId})" class="w-full px-6 py-4 flex items-center gap-3 hover:bg-gray-50 transition text-left">
                     <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
                         <i class="fas fa-ban text-red-600"></i>
                     </div>
@@ -478,6 +482,101 @@ async function loadInfoPanel(userId, username, profileImage) {
     
     // Load shared media
     loadSharedMedia(userId);
+}
+
+async function getConversationId(userId) {
+    try {
+        const response = await fetch(`${API_BASE}/messages/conversation/${userId}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        const data = await response.json();
+        return data.conversation;
+    } catch (error) {
+        console.error('Error getting conversation:', error);
+        return null;
+    }
+}
+
+async function muteConversation(conversationId) {
+    if (!conversationId) return;
+    
+    try {
+        const response = await fetch(`${API_BASE}/messages/mute/${conversationId}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        if (response.ok) {
+            showNotification('Conversation muted', 'success');
+        }
+    } catch (error) {
+        console.error('Error muting conversation:', error);
+        showNotification('Failed to mute conversation', 'error');
+    }
+}
+
+async function archiveConversation(conversationId) {
+    if (!conversationId) return;
+    
+    try {
+        const response = await fetch(`${API_BASE}/messages/archive/${conversationId}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        if (response.ok) {
+            showNotification('Conversation archived', 'success');
+            loadConversations();
+        }
+    } catch (error) {
+        console.error('Error archiving conversation:', error);
+        showNotification('Failed to archive conversation', 'error');
+    }
+}
+
+async function deleteConversation(conversationId) {
+    if (!conversationId) return;
+    
+    if (!confirm('Are you sure you want to delete this conversation? This cannot be undone.')) {
+        return;
+    }
+    
+    showNotification('Delete conversation feature coming soon', 'info');
+}
+
+async function blockUser(userId) {
+    if (!userId) return;
+    
+    if (!confirm('Are you sure you want to block this user? They will not be able to message you.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/messages/block/${userId}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        if (response.ok) {
+            showNotification('User blocked', 'success');
+            showPage('inbox');
+        }
+    } catch (error) {
+        console.error('Error blocking user:', error);
+        showNotification('Failed to block user', 'error');
+    }
+}
+
+function searchInConversation() {
+    showNotification('Search in conversation feature coming soon', 'info');
 }
 
 async function loadSharedMedia(userId) {
@@ -513,7 +612,85 @@ async function loadSharedMedia(userId) {
 }
 
 function showNewMessageModal() {
-    showNotification('New message feature coming soon!', 'info');
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+        <div class="bg-white rounded-2xl p-6 max-w-md w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">New Message</h2>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Search users</label>
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" id="userSearchInput" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Search by username..." oninput="searchUsersForMessage(this.value)">
+                </div>
+            </div>
+            
+            <div id="userSearchResults" class="max-h-64 overflow-y-auto">
+                <p class="text-gray-500 text-center py-4 text-sm">Start typing to search users</p>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    document.getElementById('userSearchInput').focus();
+}
+
+let searchTimeout = null;
+async function searchUsersForMessage(query) {
+    if (!query || query.length < 2) {
+        document.getElementById('userSearchResults').innerHTML = '<p class="text-gray-500 text-center py-4 text-sm">Start typing to search users</p>';
+        return;
+    }
+    
+    // Clear previous timeout
+    if (searchTimeout) clearTimeout(searchTimeout);
+    
+    // Set new timeout for debouncing
+    searchTimeout = setTimeout(async () => {
+        try {
+            const response = await fetch(`${API_BASE}/users/search?q=${encodeURIComponent(query)}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            
+            const data = await response.json();
+            const container = document.getElementById('userSearchResults');
+            
+            if (data.users && data.users.length > 0) {
+                container.innerHTML = data.users.map(user => `
+                    <div class="flex items-center gap-3 p-3 hover:bg-gray-100 rounded-lg cursor-pointer transition" onclick="startNewConversation(${user.id}, '${user.username}', '${user.profile_image_url || ''}')">
+                        <img src="${user.profile_image_url ? '/' + user.profile_image_url : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=0084ff&color=fff`}" 
+                             alt="${user.username}" 
+                             class="w-12 h-12 rounded-full object-cover">
+                        <div class="flex-1">
+                            <p class="font-semibold text-gray-900">${user.username}</p>
+                            <p class="text-sm text-gray-500">${user.user_type}</p>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4 text-sm">No users found</p>';
+            }
+        } catch (error) {
+            console.error('Search error:', error);
+            document.getElementById('userSearchResults').innerHTML = '<p class="text-red-500 text-center py-4 text-sm">Search failed</p>';
+        }
+    }, 300);
+}
+
+function startNewConversation(userId, username, profileImage) {
+    // Close modal
+    document.querySelector('.fixed.inset-0').remove();
+    
+    // Open conversation
+    openConversation(userId, username, profileImage);
 }
 
 // Typing indicator handler
