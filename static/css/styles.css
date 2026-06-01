@@ -309,6 +309,23 @@ body {
     border-bottom-left-radius: 0.25rem;
 }
 
+/* Facebook Messenger Style Overrides */
+.messenger-bubble-sent {
+    background: #0084ff;
+    color: white;
+    border-radius: 18px;
+    padding: 8px 12px;
+    max-width: 60%;
+}
+
+.messenger-bubble-received {
+    background: #e4e6eb;
+    color: #050505;
+    border-radius: 18px;
+    padding: 8px 12px;
+    max-width: 60%;
+}
+
 /* Profile Card */
 .profile-card {
     background: white;
