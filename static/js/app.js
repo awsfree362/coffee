@@ -161,160 +161,323 @@ function showPage(pageName) {
 async function renderHomePage() {
     const mainContent = document.getElementById('mainContent');
     
-    // Check if mobile device
-    const isMobile = window.innerWidth < 768;
-    
-    if (isMobile) {
-        // Mobile: Show TikTok-style reels feed
-        renderReelsPage();
-    } else {
-        // Desktop: Show original home page
-        mainContent.innerHTML = `
-            <div class="w-full px-4">
-                <!-- Hero Section with Google Ads -->
-                <div class="glass rounded-3xl p-8 md:p-12 mb-8 text-center">
-                    <!-- Google AdSense Display Ad -->
-                    <div class="bg-gray-100 rounded-2xl p-6 mb-6 min-h-[250px] flex items-center justify-center">
-                        <ins class="adsbygoogle"
-                             style="display:block"
-                             data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-                             data-ad-slot="XXXXXXXXXX"
-                             data-ad-format="auto"
-                             data-full-width-responsive="true"></ins>
-                        <script>
-                             (adsbygoogle = window.adsbygoogle || []).push({});
-                        </script>
-                        <!-- Placeholder text (remove when ads are active) -->
-                        <div class="text-gray-400 text-center">
-                            <i class="fas fa-ad text-4xl mb-2"></i>
-                            <p>Advertisement Space</p>
-                            <p class="text-sm">Replace with your Google AdSense code</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex flex-wrap gap-4 justify-center">
-                        <button onclick="showPage('search')" class="btn-primary">
-                            <i class="fas fa-search mr-2"></i>Browse Profiles
-                        </button>
-                        ${!currentUser ? `
-                            <button onclick="showAuthModal()" class="btn-secondary">
-                                <i class="fas fa-user-plus mr-2"></i>Join Now
-                            </button>
-                        ` : ''}
-                    </div>
-                </div>
-                
-                <!-- Online Now Escorts -->
-                <div class="mb-8 max-w-7xl mx-auto">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-bold">🟢 Online Now</h2>
-                        <button onclick="showPage('search')" class="text-pink-500 hover:text-pink-600">
-                            View All <i class="fas fa-arrow-right ml-1"></i>
-                        </button>
-                    </div>
-                    <div id="onlineEscorts" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div class="text-center py-8">
-                            <div class="spinner mx-auto"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Upcoming Events -->
-                <div id="eventsSection" class="max-w-7xl mx-auto" style="display: none;">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-bold">Upcoming Events</h2>
-                        <button onclick="showPage('events')" class="text-pink-500 hover:text-pink-600">
-                            View All <i class="fas fa-arrow-right ml-1"></i>
-                        </button>
-                    </div>
-                    <div id="upcomingEvents" class="grid md:grid-cols-3 gap-6">
-                        <div class="text-center py-8">
-                            <div class="spinner mx-auto"></div>
+    mainContent.innerHTML = `
+        <div class="w-full bg-white" style="min-height: calc(100vh - 120px);">
+            <!-- Stories Section -->
+            <div class="border-b border-gray-200 bg-white sticky top-16 z-30">
+                <div class="px-4 py-3 overflow-x-auto">
+                    <div id="storiesContainer" class="flex gap-4">
+                        <div class="text-center">
+                            <div class="w-16 h-16 rounded-full bg-gray-200 animate-pulse"></div>
                         </div>
                     </div>
                 </div>
             </div>
-        `;
-        
-        loadOnlineEscorts();
-        loadUpcomingEvents();
-    }
+            
+            <!-- Posts Feed -->
+            <div id="postsFeed" class="max-w-2xl mx-auto">
+                <div class="text-center py-8">
+                    <div class="spinner mx-auto"></div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    loadOnlineEscortsStories();
+    loadPostsFeed();
 }
 
-async function loadOnlineEscorts() {
+// Load online escorts as stories
+async function loadOnlineEscortsStories() {
     try {
-        const response = await fetch(`${API_BASE}/users/online?type=escort&limit=8`);
+        const response = await fetch(`${API_BASE}/users/online?type=escort&limit=20`);
         const data = await response.json();
         
-        const container = document.getElementById('onlineEscorts');
+        const container = document.getElementById('storiesContainer');
         if (data.users && data.users.length > 0) {
             container.innerHTML = data.users.map(user => `
-                <div class="profile-card card-hover cursor-pointer" onclick="viewProfile(${user.id})" data-user-id="${user.id}">
+                <div class="flex-shrink-0 cursor-pointer" onclick="startConversation(${user.id})">
                     <div class="relative">
-                        <img src="${user.profile_image_url ? '/' + user.profile_image_url : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=ec4899&color=fff`}" 
-                             alt="${user.username}" 
-                             class="w-full h-48 object-cover rounded-lg mb-3">
-                        <span class="online-badge absolute top-2 left-2 ${user.is_online ? 'bg-green-500' : 'bg-gray-400'} text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                            <span class="w-2 h-2 bg-white rounded-full ${user.is_online ? 'animate-pulse' : ''}"></span>${user.is_online ? 'Online' : 'Offline'}
-                        </span>
-                        ${user.is_verified ? '<span class="badge badge-verified absolute top-2 right-2"><i class="fas fa-check-circle mr-1"></i>Verified</span>' : ''}
+                        <div class="w-16 h-16 rounded-full p-0.5 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600">
+                            <div class="w-full h-full rounded-full p-0.5 bg-white">
+                                <img src="${user.profile_image_url ? '/' + user.profile_image_url : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=ec4899&color=fff`}" 
+                                     alt="${user.username}" 
+                                     class="w-full h-full rounded-full object-cover">
+                            </div>
+                        </div>
+                        <div class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
                     </div>
-                    <h3 class="font-bold text-lg">${user.username}</h3>
-                    ${user.city ? `<p class="text-gray-600 text-sm"><i class="fas fa-map-marker-alt mr-1"></i>${user.city}</p>` : ''}
-                    ${user.ethnicity ? `<p class="text-gray-500 text-xs mt-1">${user.ethnicity}</p>` : ''}
+                    <p class="text-xs text-center mt-1 truncate w-16">${user.username}</p>
                 </div>
             `).join('');
         } else {
-            container.innerHTML = '<p class="text-gray-500 text-center col-span-full">No escorts available right now</p>';
+            container.innerHTML = '<p class="text-gray-500 text-sm">No escorts online</p>';
         }
     } catch (error) {
-        console.error('Failed to load online escorts:', error);
-        document.getElementById('onlineEscorts').innerHTML = '<p class="text-red-500 text-center col-span-full">Failed to load escorts</p>';
+        console.error('Failed to load stories:', error);
+        document.getElementById('storiesContainer').innerHTML = '<p class="text-red-500 text-sm">Failed to load</p>';
     }
 }
 
-function updateUserOnlineStatus(userId, isOnline) {
-    const userCard = document.querySelector(`[data-user-id="${userId}"]`);
-    if (userCard) {
-        const badge = userCard.querySelector('.online-badge');
-        if (badge) {
-            badge.className = `online-badge absolute top-2 left-2 ${isOnline ? 'bg-green-500' : 'bg-gray-400'} text-white text-xs px-2 py-1 rounded-full flex items-center gap-1`;
-            badge.innerHTML = `<span class="w-2 h-2 bg-white rounded-full ${isOnline ? 'animate-pulse' : ''}"></span>${isOnline ? 'Online' : 'Offline'}`;
-        }
-    }
-}
-
-async function loadUpcomingEvents() {
+// Load posts feed (Instagram style)
+async function loadPostsFeed() {
     try {
-        const response = await fetch(`${API_BASE}/events/list?limit=3`);
+        const response = await fetch(`${API_BASE}/posts/feed?limit=20`);
         const data = await response.json();
         
-        const container = document.getElementById('upcomingEvents');
-        const section = document.getElementById('eventsSection');
-        
-        if (data.events && data.events.length > 0) {
-            section.style.display = 'block';
-            container.innerHTML = data.events.map(event => `
-                <div class="event-card cursor-pointer" onclick="viewEvent(${event.id})">
-                    <img src="${event.event_image_url ? '/' + event.event_image_url : 'https://via.placeholder.com/400x200?text=Event'}" 
-                         alt="${event.event_name}" 
-                         class="event-image">
-                    <div class="p-4">
-                        <h3 class="font-bold text-lg mb-2">${event.event_name}</h3>
-                        <p class="text-gray-600 text-sm mb-2">${new Date(event.event_date).toLocaleDateString()}</p>
-                        <div class="flex justify-between items-center">
-                            <span class="text-pink-500 font-bold">R${event.ticket_price}</span>
-                            <span class="text-gray-500 text-sm">${event.available_tickets} tickets left</span>
+        const container = document.getElementById('postsFeed');
+        if (data.posts && data.posts.length > 0) {
+            container.innerHTML = data.posts.map(post => `
+                <div class="border-b border-gray-200 mb-4 bg-white">
+                    <!-- Post Header -->
+                    <div class="flex items-center justify-between px-4 py-3">
+                        <div class="flex items-center gap-3 cursor-pointer" onclick="viewProfile(${post.user_id})">
+                            <img src="${post.profile_image_url ? '/' + post.profile_image_url : `https://ui-avatars.com/api/?name=${encodeURIComponent(post.username)}&background=ec4899&color=fff`}" 
+                                 alt="${post.username}" 
+                                 class="w-10 h-10 rounded-full object-cover">
+                            <div>
+                                <p class="font-semibold text-sm">${post.username}</p>
+                                <p class="text-xs text-gray-500">${formatDate(post.created_at)}</p>
+                            </div>
+                        </div>
+                        <button class="text-gray-600 hover:text-gray-800">
+                            <i class="fas fa-ellipsis-h"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Post Media -->
+                    <div class="w-full" ondblclick="likePost(${post.id})">
+                        ${post.media_type === 'video' ? `
+                            <video src="/${post.media_url}" class="w-full" controls></video>
+                        ` : `
+                            <img src="/${post.media_url}" alt="Post" class="w-full">
+                        `}
+                    </div>
+                    
+                    <!-- Post Actions -->
+                    <div class="px-4 py-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-4">
+                                <button onclick="likePost(${post.id})" id="likeBtn-${post.id}" class="text-2xl hover:text-pink-500 transition">
+                                    <i class="${post.user_has_liked ? 'fas' : 'far'} fa-heart ${post.user_has_liked ? 'text-red-500' : ''}"></i>
+                                </button>
+                                <button onclick="focusComment(${post.id})" class="text-2xl hover:text-gray-600 transition">
+                                    <i class="far fa-comment"></i>
+                                </button>
+                                <button class="text-2xl hover:text-gray-600 transition">
+                                    <i class="far fa-paper-plane"></i>
+                                </button>
+                            </div>
+                            <button class="text-2xl hover:text-gray-600 transition">
+                                <i class="far fa-bookmark"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Likes Count -->
+                        <p class="font-semibold text-sm mb-2" id="likesCount-${post.id}">${post.likes_count} likes</p>
+                        
+                        <!-- Caption -->
+                        ${post.caption ? `
+                            <p class="text-sm mb-2">
+                                <span class="font-semibold">${post.username}</span> ${post.caption}
+                            </p>
+                        ` : ''}
+                        
+                        <!-- View Comments -->
+                        ${post.comments_count > 0 ? `
+                            <button onclick="viewAllComments(${post.id})" class="text-sm text-gray-500 hover:text-gray-700 mb-2">
+                                View all ${post.comments_count} comments
+                            </button>
+                        ` : ''}
+                        
+                        <!-- Recent Comments -->
+                        <div id="recentComments-${post.id}" class="space-y-1 mb-2">
+                            <!-- Comments will be loaded here -->
+                        </div>
+                        
+                        <!-- Add Comment -->
+                        <div class="flex items-center gap-2 border-t pt-2">
+                            <input type="text" 
+                                   id="commentInput-${post.id}" 
+                                   placeholder="Add a comment..." 
+                                   class="flex-1 text-sm focus:outline-none"
+                                   onkeypress="if(event.key === 'Enter') addComment(${post.id})">
+                            <button onclick="addComment(${post.id})" class="text-blue-500 font-semibold text-sm hover:text-blue-600">
+                                Post
+                            </button>
                         </div>
                     </div>
                 </div>
             `).join('');
+            
+            // Load recent comments for each post
+            data.posts.forEach(post => {
+                loadRecentComments(post.id);
+            });
         } else {
-            section.style.display = 'none';
+            container.innerHTML = `
+                <div class="text-center py-12">
+                    <i class="fas fa-images text-6xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500 font-semibold">No posts yet</p>
+                    <p class="text-sm text-gray-400 mt-2">Follow some escorts to see their posts</p>
+                </div>
+            `;
         }
     } catch (error) {
-        console.error('Failed to load events:', error);
-        document.getElementById('eventsSection').style.display = 'none';
+        console.error('Failed to load posts:', error);
+        document.getElementById('postsFeed').innerHTML = '<p class="text-red-500 text-center py-8">Failed to load posts</p>';
+    }
+}
+
+// Load recent comments for a post
+async function loadRecentComments(postId, limit = 2) {
+    try {
+        const response = await fetch(`${API_BASE}/posts/${postId}/comments?limit=${limit}`);
+        const data = await response.json();
+        
+        const container = document.getElementById(`recentComments-${postId}`);
+        if (data.comments && data.comments.length > 0) {
+            container.innerHTML = data.comments.map(comment => `
+                <p class="text-sm">
+                    <span class="font-semibold">${comment.username}</span> ${comment.comment_text}
+                </p>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Failed to load comments:', error);
+    }
+}
+
+// Like post
+async function likePost(postId) {
+    if (!currentUser) {
+        showAuthModal();
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/posts/${postId}/like`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            const likeBtn = document.getElementById(`likeBtn-${postId}`);
+            const likesCount = document.getElementById(`likesCount-${postId}`);
+            
+            if (data.liked) {
+                likeBtn.innerHTML = '<i class="fas fa-heart text-red-500"></i>';
+                likesCount.textContent = `${data.likes_count} likes`;
+            } else {
+                likeBtn.innerHTML = '<i class="far fa-heart"></i>';
+                likesCount.textContent = `${data.likes_count} likes`;
+            }
+        } else {
+            showNotification(data.error || 'Failed to like post', 'error');
+        }
+    } catch (error) {
+        console.error('Failed to like post:', error);
+        showNotification('Failed to like post', 'error');
+    }
+}
+
+// Add comment
+async function addComment(postId) {
+    if (!currentUser) {
+        showAuthModal();
+        return;
+    }
+    
+    const input = document.getElementById(`commentInput-${postId}`);
+    const commentText = input.value.trim();
+    
+    if (!commentText) return;
+    
+    try {
+        const response = await fetch(`${API_BASE}/posts/${postId}/comment`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ comment_text: commentText })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            input.value = '';
+            loadRecentComments(postId);
+            showNotification('Comment added!', 'success');
+        } else {
+            showNotification(data.error || 'Failed to add comment', 'error');
+        }
+    } catch (error) {
+        console.error('Failed to add comment:', error);
+        showNotification('Failed to add comment', 'error');
+    }
+}
+
+// Focus comment input
+function focusComment(postId) {
+    document.getElementById(`commentInput-${postId}`).focus();
+}
+
+// View all comments
+function viewAllComments(postId) {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+        <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+            <div class="flex items-center justify-between p-4 border-b">
+                <h2 class="text-xl font-bold">Comments</h2>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="allComments-${postId}" class="flex-1 overflow-y-auto p-4">
+                <div class="text-center py-8">
+                    <div class="spinner mx-auto"></div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    loadAllComments(postId);
+}
+
+// Load all comments
+async function loadAllComments(postId) {
+    try {
+        const response = await fetch(`${API_BASE}/posts/${postId}/comments`);
+        const data = await response.json();
+        
+        const container = document.getElementById(`allComments-${postId}`);
+        if (data.comments && data.comments.length > 0) {
+            container.innerHTML = data.comments.map(comment => `
+                <div class="flex items-start gap-3 mb-4">
+                    <img src="${comment.profile_image_url ? '/' + comment.profile_image_url : `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.username)}&background=ec4899&color=fff`}" 
+                         alt="${comment.username}" 
+                         class="w-10 h-10 rounded-full object-cover">
+                    <div class="flex-1">
+                        <p class="text-sm">
+                            <span class="font-semibold">${comment.username}</span> ${comment.comment_text}
+                        </p>
+                        <p class="text-xs text-gray-500 mt-1">${formatDate(comment.created_at)}</p>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = '<p class="text-gray-500 text-center py-8">No comments yet</p>';
+        }
+    } catch (error) {
+        console.error('Failed to load comments:', error);
+        document.getElementById(`allComments-${postId}`).innerHTML = '<p class="text-red-500 text-center py-8">Failed to load comments</p>';
     }
 }
 
