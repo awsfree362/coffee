@@ -239,7 +239,7 @@ async function loadMessages(userId) {
                 
                 const isSent = msg.sender_id === currentUser.id;
                 messagesHTML += `
-                    <div class="flex ${isSent ? 'justify-end' : 'justify-start'} mb-1">
+                    <div class="flex ${isSent ? 'justify-end' : 'justify-start'} mb-1" data-message-id="${msg.id}">
                         <div class="max-w-xs lg:max-w-md">
                             ${msg.attachment_url ? `
                                 <div class="mb-1">
@@ -568,7 +568,25 @@ async function deleteConversation(conversationId) {
         return;
     }
     
-    showNotification('Delete conversation feature coming soon', 'info');
+    try {
+        const response = await fetch(`${API_BASE}/messages/delete-conversation/${conversationId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        if (response.ok) {
+            showNotification('Conversation deleted', 'success');
+            showPage('inbox');
+        } else {
+            const data = await response.json();
+            showNotification(data.error || 'Failed to delete conversation', 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting conversation:', error);
+        showNotification('Failed to delete conversation', 'error');
+    }
 }
 
 async function blockUser(userId) {
@@ -597,7 +615,109 @@ async function blockUser(userId) {
 }
 
 function searchInConversation() {
-    showNotification('Search in conversation feature coming soon', 'info');
+    if (!currentConversation) {
+        showNotification('Please open a conversation first', 'error');
+        return;
+    }
+    
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+        <div class="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Search in Conversation</h2>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="mb-4">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" id="conversationSearchInput" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Search messages..." oninput="searchConversationMessages(this.value)">
+                </div>
+            </div>
+            
+            <div id="conversationSearchResults" class="flex-1 overflow-y-auto">
+                <p class="text-gray-500 text-center py-8 text-sm">Start typing to search messages</p>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    document.getElementById('conversationSearchInput').focus();
+}
+
+let conversationSearchTimeout = null;
+async function searchConversationMessages(query) {
+    if (!query || query.length < 2) {
+        document.getElementById('conversationSearchResults').innerHTML = '<p class="text-gray-500 text-center py-8 text-sm">Start typing to search messages</p>';
+        return;
+    }
+    
+    if (conversationSearchTimeout) clearTimeout(conversationSearchTimeout);
+    
+    conversationSearchTimeout = setTimeout(async () => {
+        try {
+            const response = await fetch(`${API_BASE}/messages/search?q=${encodeURIComponent(query)}&conversation_id=${currentConversationId}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            
+            const data = await response.json();
+            const container = document.getElementById('conversationSearchResults');
+            
+            if (data.messages && data.messages.length > 0) {
+                container.innerHTML = data.messages.map(msg => {
+                    const isSent = msg.sender_id === currentUser.id;
+                    const highlightedText = msg.message_text.replace(
+                        new RegExp(query, 'gi'),
+                        match => `<mark class="bg-yellow-200">${match}</mark>`
+                    );
+                    
+                    return `
+                        <div class="p-3 border-b hover:bg-gray-50 cursor-pointer" onclick="jumpToMessage(${msg.id})">
+                            <div class="flex items-start gap-3">
+                                <img src="${msg.profile_image_url ? '/' + msg.profile_image_url : `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.username)}&background=0084ff&color=fff`}" 
+                                     alt="${msg.username}" 
+                                     class="w-10 h-10 rounded-full object-cover">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <p class="font-semibold text-sm">${msg.username}</p>
+                                        <span class="text-xs text-gray-500">${formatDate(msg.created_at)}</span>
+                                    </div>
+                                    <p class="text-sm text-gray-700">${highlightedText}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                container.innerHTML = '<p class="text-gray-500 text-center py-8 text-sm">No messages found</p>';
+            }
+        } catch (error) {
+            console.error('Search error:', error);
+            document.getElementById('conversationSearchResults').innerHTML = '<p class="text-red-500 text-center py-8 text-sm">Search failed</p>';
+        }
+    }, 300);
+}
+
+function jumpToMessage(messageId) {
+    // Close search modal
+    document.querySelector('.fixed.inset-0').remove();
+    
+    // Reload messages and scroll to the message
+    loadMessages(currentConversation.user_id).then(() => {
+        const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+        if (messageElement) {
+            messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            messageElement.classList.add('bg-yellow-100');
+            setTimeout(() => {
+                messageElement.classList.remove('bg-yellow-100');
+            }, 2000);
+        }
+    });
 }
 
 async function loadSharedMedia(userId) {
@@ -1241,10 +1361,31 @@ function clearMessageCache() {
 function downloadMessageData() {
     showNotification('Preparing your data for download...', 'info');
     
-    // This would typically call an API to generate a data export
-    setTimeout(() => {
-        showNotification('Data export feature will be available soon', 'info');
-    }, 1500);
+    // Call API to generate data export
+    fetch(`${API_BASE}/messages/export-data`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+    })
+    .then(response => response.blob())
+    .then(blob => {
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `coffee_messages_export_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        showNotification('Data exported successfully!', 'success');
+    })
+    .catch(error => {
+        console.error('Export error:', error);
+        showNotification('Failed to export data', 'error');
+    });
 }
 
 async function markAllAsRead() {

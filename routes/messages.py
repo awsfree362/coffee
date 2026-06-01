@@ -488,6 +488,152 @@ def decline_message_request(other_user_id):
     
     return jsonify({'message': 'Message request declined'}), 200
 
+@bp.route('/export-data', methods=['GET'])
+@jwt_required()
+def export_message_data():
+    from flask import send_file
+    import json
+    import io
+    from datetime import datetime
+    
+    user_id = get_jwt_identity()
+    
+    # Get user info
+    user = execute_query(
+        'SELECT id, username, email, user_type FROM users WHERE id = %s',
+        (user_id,),
+        fetch_one=True
+    )
+    
+    # Get all conversations
+    conversations = execute_query(
+        '''SELECT c.*, 
+           CASE WHEN c.user1_id = %s THEN c.user2_id ELSE c.user1_id END as other_user_id,
+           u.username as other_username
+           FROM conversations c
+           JOIN users u ON (CASE WHEN c.user1_id = %s THEN c.user2_id ELSE c.user1_id END) = u.id
+           WHERE c.user1_id = %s OR c.user2_id = %s
+           ORDER BY c.created_at DESC''',
+        (user_id, user_id, user_id, user_id),
+        fetch=True
+    )
+    
+    # Get all messages for each conversation
+    export_data = {
+        'export_info': {
+            'user_id': user['id'],
+            'username': user['username'],
+            'email': user['email'],
+            'user_type': user['user_type'],
+            'export_date': datetime.now().isoformat(),
+            'total_conversations': len(conversations)
+        },
+        'conversations': []
+    }
+    
+    for conv in conversations:
+        messages = execute_query(
+            '''SELECT m.*, u.username as sender_username
+               FROM messages m
+               JOIN users u ON m.sender_id = u.id
+               WHERE m.conversation_id = %s
+               ORDER BY m.created_at ASC''',
+            (conv['id'],),
+            fetch=True
+        )
+        
+        # Get conversation settings
+        settings = execute_query(
+            '''SELECT * FROM conversation_settings 
+               WHERE conversation_id = %s AND user_id = %s''',
+            (conv['id'], user_id),
+            fetch_one=True
+        )
+        
+        conv_data = {
+            'conversation_id': conv['id'],
+            'other_user': {
+                'user_id': conv['other_user_id'],
+                'username': conv['other_username']
+            },
+            'created_at': conv['created_at'].isoformat() if conv['created_at'] else None,
+            'last_message_at': conv['last_message_at'].isoformat() if conv['last_message_at'] else None,
+            'settings': {
+                'is_archived': settings['is_archived'] if settings else False,
+                'is_muted': settings['is_muted'] if settings else False,
+                'nickname': settings['nickname'] if settings else None
+            },
+            'total_messages': len(messages),
+            'messages': []
+        }
+        
+        for msg in messages:
+            msg_data = {
+                'message_id': msg['id'],
+                'sender': {
+                    'user_id': msg['sender_id'],
+                    'username': msg['sender_username']
+                },
+                'message_text': msg['message_text'],
+                'attachment_url': msg['attachment_url'],
+                'attachment_type': msg['attachment_type'],
+                'is_read': bool(msg['is_read']),
+                'created_at': msg['created_at'].isoformat() if msg['created_at'] else None,
+                'read_at': msg['read_at'].isoformat() if msg['read_at'] else None
+            }
+            conv_data['messages'].append(msg_data)
+        
+        export_data['conversations'].append(conv_data)
+    
+    # Create JSON file in memory
+    json_data = json.dumps(export_data, indent=2, ensure_ascii=False)
+    json_bytes = io.BytesIO(json_data.encode('utf-8'))
+    json_bytes.seek(0)
+    
+    # Send file
+    return send_file(
+        json_bytes,
+        mimetype='application/json',
+        as_attachment=True,
+        download_name=f'coffee_messages_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+    )
+
+@bp.route('/delete-conversation/<int:conversation_id>', methods=['DELETE'])
+@jwt_required()
+def delete_conversation(conversation_id):
+    user_id = get_jwt_identity()
+    
+    # Verify user is part of the conversation
+    conversation = execute_query(
+        '''SELECT * FROM conversations 
+           WHERE id = %s AND (user1_id = %s OR user2_id = %s)''',
+        (conversation_id, user_id, user_id),
+        fetch_one=True
+    )
+    
+    if not conversation:
+        return jsonify({'error': 'Conversation not found'}), 404
+    
+    # Delete all messages in the conversation
+    execute_query(
+        'DELETE FROM messages WHERE conversation_id = %s',
+        (conversation_id,)
+    )
+    
+    # Delete conversation settings
+    execute_query(
+        'DELETE FROM conversation_settings WHERE conversation_id = %s',
+        (conversation_id,)
+    )
+    
+    # Delete the conversation
+    execute_query(
+        'DELETE FROM conversations WHERE id = %s',
+        (conversation_id,)
+    )
+    
+    return jsonify({'message': 'Conversation deleted successfully'}), 200
+
 # Socket.IO event handlers
 def register_socketio_handlers(socketio):
     @socketio.on('connect')
