@@ -1,5 +1,7 @@
 // Messages Module - Facebook Messenger Style
 let showInfoPanel = false;
+let typingTimeout = null;
+let currentConversationId = null;
 
 async function renderInboxPage() {
     const mainContent = document.getElementById('mainContent');
@@ -62,6 +64,7 @@ async function renderInboxPage() {
     `;
     
     loadConversations();
+    setupSocketListeners();
 }
 
 let currentConversation = null;
@@ -124,7 +127,7 @@ async function openConversation(userId, username, profileImage) {
                  onclick="viewProfile(${userId})">
             <div class="flex-1 cursor-pointer" onclick="viewProfile(${userId})">
                 <p class="font-semibold text-gray-900">${username}</p>
-                <p class="text-xs text-gray-500">Active now</p>
+                <p id="typingIndicator" class="text-xs text-gray-500">Active now</p>
             </div>
             <div class="flex gap-1">
                 <button class="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center text-blue-600 transition" title="Voice call">
@@ -161,7 +164,7 @@ async function openConversation(userId, username, profileImage) {
                     <i class="fas fa-image text-lg"></i>
                 </button>
                 <div class="flex-1 relative">
-                    <input type="text" id="messageInput" class="w-full px-4 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:bg-gray-200" placeholder="Aa" required>
+                    <input type="text" id="messageInput" class="w-full px-4 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:bg-gray-200" placeholder="Aa" oninput="handleTyping()">
                     <button type="button" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700" title="Add emoji">
                         <i class="far fa-smile text-lg"></i>
                     </button>
@@ -511,6 +514,85 @@ async function loadSharedMedia(userId) {
 
 function showNewMessageModal() {
     showNotification('New message feature coming soon!', 'info');
+}
+
+// Typing indicator handler
+function handleTyping() {
+    if (!currentConversation || !socket) return;
+    
+    // Emit typing start
+    socket.emit('typing_start', {
+        conversation_id: currentConversationId,
+        user_id: currentUser.id,
+        receiver_id: currentConversation.user_id
+    });
+    
+    // Clear existing timeout
+    if (typingTimeout) {
+        clearTimeout(typingTimeout);
+    }
+    
+    // Set timeout to emit typing stop
+    typingTimeout = setTimeout(() => {
+        socket.emit('typing_stop', {
+            conversation_id: currentConversationId,
+            user_id: currentUser.id,
+            receiver_id: currentConversation.user_id
+        });
+    }, 2000);
+}
+
+// Setup socket event listeners
+function setupSocketListeners() {
+    if (!socket) return;
+    
+    // Listen for new messages
+    socket.on('new_message', (data) => {
+        if (currentConversation && data.message.sender_id === currentConversation.user_id) {
+            // Reload messages if conversation is open
+            loadMessages(currentConversation.user_id);
+        }
+        // Always reload conversations list
+        loadConversations();
+    });
+    
+    // Listen for typing indicators
+    socket.on('user_typing', (data) => {
+        if (currentConversation && data.user_id === currentConversation.user_id) {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) {
+                if (data.typing) {
+                    indicator.textContent = 'Typing...';
+                    indicator.classList.add('text-blue-600');
+                } else {
+                    indicator.textContent = 'Active now';
+                    indicator.classList.remove('text-blue-600');
+                }
+            }
+        }
+    });
+    
+    // Listen for online status changes
+    socket.on('user_status', (data) => {
+        // Update conversation list online indicators
+        const statusIndicators = document.querySelectorAll(`[data-user-id="${data.user_id}"]`);
+        statusIndicators.forEach(indicator => {
+            if (data.online) {
+                indicator.classList.remove('hidden');
+            } else {
+                indicator.classList.add('hidden');
+            }
+        });
+    });
+    
+    // Listen for read receipts
+    socket.on('message_read_receipt', (data) => {
+        // Update message read status in UI
+        const messageElement = document.querySelector(`[data-message-id="${data.message_id}"]`);
+        if (messageElement) {
+            messageElement.classList.add('read');
+        }
+    });
 }
 
 async function startConversation(userId) {

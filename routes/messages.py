@@ -110,45 +110,57 @@ def send_message():
     data = request.form
     files = request.files
     
-    conversation_id = data.get('conversation_id')
-    other_user_id = data.get('other_user_id')
+    receiver_id = data.get('receiver_id')
     
-    if not conversation_id and not other_user_id:
-        return jsonify({'error': 'conversation_id or other_user_id required'}), 400
+    if not receiver_id:
+        return jsonify({'error': 'receiver_id required'}), 400
+    
+    receiver_id = int(receiver_id)
     
     # Check messaging limits
-    if other_user_id and not can_user_message(user_id, int(other_user_id)):
+    if not can_user_message(user_id, receiver_id):
         return jsonify({'error': 'Monthly message limit reached. Upgrade to premium.'}), 403
     
     # Get or create conversation
-    if not conversation_id:
-        conversation = execute_query(
-            '''SELECT id FROM conversations 
-               WHERE (user1_id = %s AND user2_id = %s) OR (user1_id = %s AND user2_id = %s)''',
-            (user_id, other_user_id, other_user_id, user_id),
-            fetch_one=True
+    conversation = execute_query(
+        '''SELECT id FROM conversations 
+           WHERE (user1_id = %s AND user2_id = %s) OR (user1_id = %s AND user2_id = %s)''',
+        (user_id, receiver_id, receiver_id, user_id),
+        fetch_one=True
+    )
+    
+    if not conversation:
+        conversation_id = execute_query(
+            'INSERT INTO conversations (user1_id, user2_id) VALUES (%s, %s)',
+            (min(user_id, receiver_id), max(user_id, receiver_id))
         )
-        
-        if not conversation:
-            conversation_id = execute_query(
-                'INSERT INTO conversations (user1_id, user2_id) VALUES (%s, %s)',
-                (min(user_id, int(other_user_id)), max(user_id, int(other_user_id)))
-            )
-        else:
-            conversation_id = conversation['id']
+    else:
+        conversation_id = conversation['id']
     
     # Handle attachment
     attachment_url = None
     attachment_type = None
     if 'attachment' in files:
-        attachment_url = save_file(files['attachment'], 'messages')
-        attachment_type = data.get('attachment_type', 'image')
+        file = files['attachment']
+        attachment_url = save_file(file, 'messages')
+        # Determine type from file
+        if file.content_type.startswith('image/'):
+            attachment_type = 'image'
+        elif file.content_type.startswith('video/'):
+            attachment_type = 'video'
+        else:
+            attachment_type = 'document'
+    
+    message_text = data.get('message_text', '').strip()
+    
+    if not message_text and not attachment_url:
+        return jsonify({'error': 'Message text or attachment required'}), 400
     
     # Insert message
     message_id = execute_query(
         '''INSERT INTO messages (conversation_id, sender_id, message_text, attachment_url, attachment_type) 
            VALUES (%s, %s, %s, %s, %s)''',
-        (conversation_id, user_id, data.get('message_text'), attachment_url, attachment_type)
+        (conversation_id, user_id, message_text if message_text else None, attachment_url, attachment_type)
     )
     
     # Update conversation last message time
@@ -159,21 +171,34 @@ def send_message():
     
     # Track interaction for free visitors
     user = execute_query('SELECT user_type FROM users WHERE id = %s', (user_id,), fetch_one=True)
-    if user['user_type'] == 'visitor' and other_user_id:
+    if user['user_type'] == 'visitor':
         month_year = get_month_year()
         execute_query(
             '''INSERT INTO visitor_interactions (visitor_id, interaction_type, target_user_id, month_year, interaction_count)
                VALUES (%s, %s, %s, %s, 1)
                ON DUPLICATE KEY UPDATE interaction_count = interaction_count + 1''',
-            (user_id, 'message', other_user_id, month_year)
+            (user_id, 'message', receiver_id, month_year)
         )
+    
+    # Get the message with user info
+    message = execute_query(
+        '''SELECT m.*, u.username, u.profile_image_url
+           FROM messages m
+           JOIN users u ON m.sender_id = u.id
+           WHERE m.id = %s''',
+        (message_id,),
+        fetch_one=True
+    )
     
     # Emit socket event
     from app import socketio
-    message = execute_query('SELECT * FROM messages WHERE id = %s', (message_id,), fetch_one=True)
-    socketio.emit('new_message', message, room=f'conversation_{conversation_id}')
+    socketio.emit('new_message', {
+        'conversation_id': conversation_id,
+        'message': message,
+        'receiver_id': receiver_id
+    }, room=f'user_{receiver_id}')
     
-    return jsonify({'message': 'Message sent', 'message_id': message_id}), 201
+    return jsonify({'message': 'Message sent', 'message_id': message_id, 'data': message}), 201
 
 @bp.route('/check-limit', methods=['GET'])
 @jwt_required()
@@ -211,6 +236,179 @@ def check_message_limit():
         'used': count['count']
     }), 200
 
+@bp.route('/mark-read/<int:conversation_id>', methods=['POST'])
+@jwt_required()
+def mark_messages_read(conversation_id):
+    user_id = get_jwt_identity()
+    
+    # Mark all messages in conversation as read
+    execute_query(
+        '''UPDATE messages SET is_read = TRUE, read_at = NOW() 
+           WHERE conversation_id = %s AND sender_id != %s AND is_read = FALSE''',
+        (conversation_id, user_id)
+    )
+    
+    return jsonify({'message': 'Messages marked as read'}), 200
+
+@bp.route('/delete/<int:message_id>', methods=['DELETE'])
+@jwt_required()
+def delete_message(message_id):
+    user_id = get_jwt_identity()
+    
+    # Get message
+    message = execute_query(
+        'SELECT * FROM messages WHERE id = %s',
+        (message_id,),
+        fetch_one=True
+    )
+    
+    if not message:
+        return jsonify({'error': 'Message not found'}), 404
+    
+    # Only sender can delete
+    if message['sender_id'] != user_id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Soft delete
+    execute_query(
+        'UPDATE messages SET deleted_by_sender = TRUE WHERE id = %s',
+        (message_id,)
+    )
+    
+    return jsonify({'message': 'Message deleted'}), 200
+
+@bp.route('/search', methods=['GET'])
+@jwt_required()
+def search_messages():
+    user_id = get_jwt_identity()
+    query = request.args.get('q', '')
+    conversation_id = request.args.get('conversation_id')
+    
+    if not query:
+        return jsonify({'messages': []}), 200
+    
+    sql = '''SELECT m.*, u.username, u.profile_image_url
+             FROM messages m
+             JOIN conversations c ON m.conversation_id = c.id
+             JOIN users u ON m.sender_id = u.id
+             WHERE (c.user1_id = %s OR c.user2_id = %s)
+             AND m.message_text LIKE %s'''
+    
+    params = [user_id, user_id, f'%{query}%']
+    
+    if conversation_id:
+        sql += ' AND m.conversation_id = %s'
+        params.append(conversation_id)
+    
+    sql += ' ORDER BY m.created_at DESC LIMIT 50'
+    
+    messages = execute_query(sql, tuple(params), fetch=True)
+    
+    return jsonify({'messages': messages}), 200
+
+@bp.route('/archive/<int:conversation_id>', methods=['POST'])
+@jwt_required()
+def archive_conversation(conversation_id):
+    user_id = get_jwt_identity()
+    
+    # Insert or update conversation settings
+    execute_query(
+        '''INSERT INTO conversation_settings (conversation_id, user_id, is_archived)
+           VALUES (%s, %s, TRUE)
+           ON DUPLICATE KEY UPDATE is_archived = TRUE''',
+        (conversation_id, user_id)
+    )
+    
+    return jsonify({'message': 'Conversation archived'}), 200
+
+@bp.route('/unarchive/<int:conversation_id>', methods=['POST'])
+@jwt_required()
+def unarchive_conversation(conversation_id):
+    user_id = get_jwt_identity()
+    
+    execute_query(
+        '''INSERT INTO conversation_settings (conversation_id, user_id, is_archived)
+           VALUES (%s, %s, FALSE)
+           ON DUPLICATE KEY UPDATE is_archived = FALSE''',
+        (conversation_id, user_id)
+    )
+    
+    return jsonify({'message': 'Conversation unarchived'}), 200
+
+@bp.route('/mute/<int:conversation_id>', methods=['POST'])
+@jwt_required()
+def mute_conversation(conversation_id):
+    user_id = get_jwt_identity()
+    
+    execute_query(
+        '''INSERT INTO conversation_settings (conversation_id, user_id, is_muted)
+           VALUES (%s, %s, TRUE)
+           ON DUPLICATE KEY UPDATE is_muted = TRUE''',
+        (conversation_id, user_id)
+    )
+    
+    return jsonify({'message': 'Conversation muted'}), 200
+
+@bp.route('/unmute/<int:conversation_id>', methods=['POST'])
+@jwt_required()
+def unmute_conversation(conversation_id):
+    user_id = get_jwt_identity()
+    
+    execute_query(
+        '''INSERT INTO conversation_settings (conversation_id, user_id, is_muted)
+           VALUES (%s, %s, FALSE)
+           ON DUPLICATE KEY UPDATE is_muted = FALSE''',
+        (conversation_id, user_id)
+    )
+    
+    return jsonify({'message': 'Conversation unmuted'}), 200
+
+@bp.route('/block/<int:other_user_id>', methods=['POST'])
+@jwt_required()
+def block_user(other_user_id):
+    user_id = get_jwt_identity()
+    
+    # Get conversation
+    conversation = execute_query(
+        '''SELECT id FROM conversations 
+           WHERE (user1_id = %s AND user2_id = %s) OR (user1_id = %s AND user2_id = %s)''',
+        (user_id, other_user_id, other_user_id, user_id),
+        fetch_one=True
+    )
+    
+    if conversation:
+        execute_query(
+            '''INSERT INTO conversation_settings (conversation_id, user_id, is_blocked)
+               VALUES (%s, %s, TRUE)
+               ON DUPLICATE KEY UPDATE is_blocked = TRUE''',
+            (conversation['id'], user_id)
+        )
+    
+    return jsonify({'message': 'User blocked'}), 200
+
+@bp.route('/unblock/<int:other_user_id>', methods=['POST'])
+@jwt_required()
+def unblock_user(other_user_id):
+    user_id = get_jwt_identity()
+    
+    # Get conversation
+    conversation = execute_query(
+        '''SELECT id FROM conversations 
+           WHERE (user1_id = %s AND user2_id = %s) OR (user1_id = %s AND user2_id = %s)''',
+        (user_id, other_user_id, other_user_id, user_id),
+        fetch_one=True
+    )
+    
+    if conversation:
+        execute_query(
+            '''INSERT INTO conversation_settings (conversation_id, user_id, is_blocked)
+               VALUES (%s, %s, FALSE)
+               ON DUPLICATE KEY UPDATE is_blocked = FALSE''',
+            (conversation['id'], user_id)
+        )
+    
+    return jsonify({'message': 'User unblocked'}), 200
+
 # Socket.IO event handlers
 def register_socketio_handlers(socketio):
     @socketio.on('connect')
@@ -224,9 +422,22 @@ def register_socketio_handlers(socketio):
                 user_id = decoded['sub']
                 from app import online_users
                 online_users.add(user_id)
+                
+                # Join user's personal room
+                from flask_socketio import join_room
+                join_room(f'user_{user_id}')
+                
+                # Update online status in database
+                execute_query(
+                    '''INSERT INTO user_online_status (user_id, is_online, last_seen)
+                       VALUES (%s, TRUE, NOW())
+                       ON DUPLICATE KEY UPDATE is_online = TRUE, last_seen = NOW()''',
+                    (user_id,)
+                )
+                
                 socketio.emit('user_status', {'user_id': user_id, 'online': True}, broadcast=True)
-            except:
-                pass
+            except Exception as e:
+                print(f"Connect error: {e}")
     
     @socketio.on('disconnect')
     def handle_disconnect():
@@ -239,17 +450,72 @@ def register_socketio_handlers(socketio):
                 user_id = decoded['sub']
                 from app import online_users
                 online_users.discard(user_id)
+                
+                # Update online status in database
+                execute_query(
+                    '''UPDATE user_online_status 
+                       SET is_online = FALSE, last_seen = NOW() 
+                       WHERE user_id = %s''',
+                    (user_id,)
+                )
+                
                 socketio.emit('user_status', {'user_id': user_id, 'online': False}, broadcast=True)
-            except:
-                pass
+            except Exception as e:
+                print(f"Disconnect error: {e}")
     
     @socketio.on('join_conversation')
     def handle_join_conversation(data):
-        conversation_id = data.get('conversation_id')
-        join_room(f'conversation_{conversation_id}')
-
-    @socketio.on('typing')
-    def handle_typing(data):
+        from flask_socketio import join_room
+        user_id = data.get('user_id')
+        if user_id:
+            join_room(f'user_{user_id}')
+    
+    @socketio.on('typing_start')
+    def handle_typing_start(data):
+        from flask_socketio import emit
         conversation_id = data.get('conversation_id')
         user_id = data.get('user_id')
-        emit('user_typing', {'user_id': user_id}, room=f'conversation_{conversation_id}', include_self=False)
+        receiver_id = data.get('receiver_id')
+        
+        if receiver_id:
+            emit('user_typing', {
+                'conversation_id': conversation_id,
+                'user_id': user_id,
+                'typing': True
+            }, room=f'user_{receiver_id}')
+    
+    @socketio.on('typing_stop')
+    def handle_typing_stop(data):
+        from flask_socketio import emit
+        conversation_id = data.get('conversation_id')
+        user_id = data.get('user_id')
+        receiver_id = data.get('receiver_id')
+        
+        if receiver_id:
+            emit('user_typing', {
+                'conversation_id': conversation_id,
+                'user_id': user_id,
+                'typing': False
+            }, room=f'user_{receiver_id}')
+    
+    @socketio.on('message_read')
+    def handle_message_read(data):
+        from flask_socketio import emit
+        message_id = data.get('message_id')
+        conversation_id = data.get('conversation_id')
+        reader_id = data.get('reader_id')
+        sender_id = data.get('sender_id')
+        
+        # Update message read status
+        execute_query(
+            'UPDATE messages SET is_read = TRUE, read_at = NOW() WHERE id = %s',
+            (message_id,)
+        )
+        
+        # Notify sender
+        if sender_id:
+            emit('message_read_receipt', {
+                'message_id': message_id,
+                'conversation_id': conversation_id,
+                'reader_id': reader_id
+            }, room=f'user_{sender_id}')
