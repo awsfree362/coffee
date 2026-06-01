@@ -409,6 +409,85 @@ def unblock_user(other_user_id):
     
     return jsonify({'message': 'User unblocked'}), 200
 
+@bp.route('/conversation-settings/<int:conversation_id>', methods=['GET'])
+@jwt_required()
+def get_conversation_settings(conversation_id):
+    user_id = get_jwt_identity()
+    
+    settings = execute_query(
+        '''SELECT * FROM conversation_settings 
+           WHERE conversation_id = %s AND user_id = %s''',
+        (conversation_id, user_id),
+        fetch_one=True
+    )
+    
+    if not settings:
+        return jsonify({
+            'is_archived': False,
+            'is_muted': False,
+            'is_blocked': False
+        }), 200
+    
+    return jsonify(settings), 200
+
+@bp.route('/requests', methods=['GET'])
+@jwt_required()
+def get_message_requests():
+    user_id = get_jwt_identity()
+    
+    # Get conversations where user hasn't replied yet (message requests)
+    requests = execute_query(
+        '''SELECT DISTINCT
+           CASE WHEN c.user1_id = %s THEN c.user2_id ELSE c.user1_id END as user_id,
+           u.username, u.profile_image_url, u.user_type,
+           (SELECT message_text FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message,
+           c.id as conversation_id
+           FROM conversations c
+           JOIN users u ON (CASE WHEN c.user1_id = %s THEN c.user2_id ELSE c.user1_id END) = u.id
+           WHERE (c.user1_id = %s OR c.user2_id = %s)
+           AND NOT EXISTS (
+               SELECT 1 FROM messages m 
+               WHERE m.conversation_id = c.id AND m.sender_id = %s
+           )
+           AND EXISTS (
+               SELECT 1 FROM messages m 
+               WHERE m.conversation_id = c.id AND m.sender_id != %s
+           )
+           ORDER BY c.last_message_at DESC''',
+        (user_id, user_id, user_id, user_id, user_id, user_id),
+        fetch=True
+    )
+    
+    return jsonify({'requests': requests}), 200
+
+@bp.route('/decline-request/<int:other_user_id>', methods=['POST'])
+@jwt_required()
+def decline_message_request(other_user_id):
+    user_id = get_jwt_identity()
+    
+    # Get conversation
+    conversation = execute_query(
+        '''SELECT id FROM conversations 
+           WHERE (user1_id = %s AND user2_id = %s) OR (user1_id = %s AND user2_id = %s)''',
+        (user_id, other_user_id, other_user_id, user_id),
+        fetch_one=True
+    )
+    
+    if conversation:
+        # Delete all messages in the conversation
+        execute_query(
+            'DELETE FROM messages WHERE conversation_id = %s',
+            (conversation['id'],)
+        )
+        
+        # Delete the conversation
+        execute_query(
+            'DELETE FROM conversations WHERE id = %s',
+            (conversation['id'],)
+        )
+    
+    return jsonify({'message': 'Message request declined'}), 200
+
 # Socket.IO event handlers
 def register_socketio_handlers(socketio):
     @socketio.on('connect')

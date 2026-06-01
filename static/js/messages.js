@@ -865,17 +865,386 @@ function closeMessengerOptions(e) {
 
 function showArchivedChats() {
     toggleMessengerOptions();
-    showNotification('Archived chats feature coming soon', 'info');
+    
+    const mainContent = document.getElementById('mainContent');
+    mainContent.innerHTML = `
+        <div class="h-screen flex bg-white" style="height: calc(100vh - 120px);">
+            <div class="w-full max-w-4xl mx-auto flex flex-col">
+                <!-- Header -->
+                <div class="p-4 border-b border-gray-200">
+                    <div class="flex items-center gap-3 mb-4">
+                        <button onclick="showPage('inbox')" class="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-700 transition">
+                            <i class="fas fa-arrow-left text-lg"></i>
+                        </button>
+                        <h1 class="text-2xl font-bold">Archived Chats</h1>
+                    </div>
+                </div>
+                
+                <!-- Archived Conversations List -->
+                <div id="archivedConversationsList" class="flex-1 overflow-y-auto">
+                    <div class="text-center py-8">
+                        <div class="spinner mx-auto"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    loadArchivedConversations();
+}
+
+async function loadArchivedConversations() {
+    try {
+        const response = await fetch(`${API_BASE}/messages/conversations`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        const data = await response.json();
+        const container = document.getElementById('archivedConversationsList');
+        
+        // Filter archived conversations (we'll need to check settings)
+        const archivedConvs = [];
+        
+        if (data.conversations) {
+            for (const conv of data.conversations) {
+                // Check if archived
+                const settingsResp = await fetch(`${API_BASE}/messages/conversation-settings/${conv.id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                const settings = await settingsResp.json();
+                if (settings.is_archived) {
+                    archivedConvs.push(conv);
+                }
+            }
+        }
+        
+        if (archivedConvs.length > 0) {
+            container.innerHTML = archivedConvs.map(conv => `
+                <div class="px-4 py-3 border-b hover:bg-gray-50 cursor-pointer transition" 
+                     onclick="openConversation(${conv.user_id}, '${conv.username}', '${conv.profile_image_url || ''}')">
+                    <div class="flex items-center gap-3">
+                        <img src="${conv.profile_image_url ? '/' + conv.profile_image_url : `https://ui-avatars.com/api/?name=${encodeURIComponent(conv.username)}&background=0084ff&color=fff`}" 
+                             alt="${conv.username}" 
+                             class="w-14 h-14 rounded-full object-cover">
+                        <div class="flex-1">
+                            <p class="font-semibold text-gray-900">${conv.username}</p>
+                            <p class="text-sm text-gray-600 truncate">${conv.last_message || 'No messages'}</p>
+                        </div>
+                        <button onclick="event.stopPropagation(); unarchiveConversationFromList(${conv.id})" class="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            Unarchive
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = `
+                <div class="text-center py-12">
+                    <i class="fas fa-archive text-6xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500 font-semibold">No archived chats</p>
+                    <p class="text-sm text-gray-400 mt-2">Archived conversations will appear here</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Failed to load archived conversations:', error);
+        document.getElementById('archivedConversationsList').innerHTML = '<p class="text-red-500 text-center py-8">Failed to load archived chats</p>';
+    }
+}
+
+async function unarchiveConversationFromList(conversationId) {
+    try {
+        const response = await fetch(`${API_BASE}/messages/unarchive/${conversationId}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        if (response.ok) {
+            showNotification('Conversation unarchived', 'success');
+            loadArchivedConversations();
+        }
+    } catch (error) {
+        console.error('Error unarchiving conversation:', error);
+        showNotification('Failed to unarchive conversation', 'error');
+    }
 }
 
 function showMessageRequests() {
     toggleMessengerOptions();
-    showNotification('Message requests feature coming soon', 'info');
+    
+    const mainContent = document.getElementById('mainContent');
+    mainContent.innerHTML = `
+        <div class="h-screen flex bg-white" style="height: calc(100vh - 120px);">
+            <div class="w-full max-w-4xl mx-auto flex flex-col">
+                <!-- Header -->
+                <div class="p-4 border-b border-gray-200">
+                    <div class="flex items-center gap-3 mb-4">
+                        <button onclick="showPage('inbox')" class="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-700 transition">
+                            <i class="fas fa-arrow-left text-lg"></i>
+                        </button>
+                        <h1 class="text-2xl font-bold">Message Requests</h1>
+                    </div>
+                    <p class="text-sm text-gray-600">Messages from people you may not know</p>
+                </div>
+                
+                <!-- Message Requests List -->
+                <div id="messageRequestsList" class="flex-1 overflow-y-auto">
+                    <div class="text-center py-8">
+                        <div class="spinner mx-auto"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    loadMessageRequests();
+}
+
+async function loadMessageRequests() {
+    try {
+        const response = await fetch(`${API_BASE}/messages/requests`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        const data = await response.json();
+        const container = document.getElementById('messageRequestsList');
+        
+        if (data.requests && data.requests.length > 0) {
+            container.innerHTML = data.requests.map(req => `
+                <div class="px-4 py-4 border-b">
+                    <div class="flex items-center gap-3 mb-3">
+                        <img src="${req.profile_image_url ? '/' + req.profile_image_url : `https://ui-avatars.com/api/?name=${encodeURIComponent(req.username)}&background=0084ff&color=fff`}" 
+                             alt="${req.username}" 
+                             class="w-14 h-14 rounded-full object-cover">
+                        <div class="flex-1">
+                            <p class="font-semibold text-gray-900">${req.username}</p>
+                            <p class="text-sm text-gray-600">${req.user_type}</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-700 mb-3">${req.last_message || 'Wants to connect with you'}</p>
+                    <div class="flex gap-2">
+                        <button onclick="acceptMessageRequest(${req.user_id}, '${req.username}', '${req.profile_image_url || ''}')" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">
+                            Accept
+                        </button>
+                        <button onclick="declineMessageRequest(${req.user_id})" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold">
+                            Decline
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = `
+                <div class="text-center py-12">
+                    <i class="fas fa-envelope-open text-6xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500 font-semibold">No message requests</p>
+                    <p class="text-sm text-gray-400 mt-2">You're all caught up!</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Failed to load message requests:', error);
+        document.getElementById('messageRequestsList').innerHTML = '<p class="text-red-500 text-center py-8">Failed to load message requests</p>';
+    }
+}
+
+function acceptMessageRequest(userId, username, profileImage) {
+    showPage('inbox');
+    setTimeout(() => {
+        openConversation(userId, username, profileImage);
+    }, 300);
+}
+
+async function declineMessageRequest(userId) {
+    if (!confirm('Are you sure you want to decline this message request?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/messages/decline-request/${userId}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        if (response.ok) {
+            showNotification('Message request declined', 'success');
+            loadMessageRequests();
+        }
+    } catch (error) {
+        console.error('Error declining request:', error);
+        showNotification('Failed to decline request', 'error');
+    }
 }
 
 function showMessengerSettings() {
     toggleMessengerOptions();
-    showNotification('Messenger settings feature coming soon', 'info');
+    
+    const mainContent = document.getElementById('mainContent');
+    mainContent.innerHTML = `
+        <div class="h-screen flex bg-white" style="height: calc(100vh - 120px);">
+            <div class="w-full max-w-4xl mx-auto flex flex-col">
+                <!-- Header -->
+                <div class="p-4 border-b border-gray-200">
+                    <div class="flex items-center gap-3 mb-4">
+                        <button onclick="showPage('inbox')" class="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-700 transition">
+                            <i class="fas fa-arrow-left text-lg"></i>
+                        </button>
+                        <h1 class="text-2xl font-bold">Messenger Settings</h1>
+                    </div>
+                </div>
+                
+                <!-- Settings Content -->
+                <div class="flex-1 overflow-y-auto">
+                    <!-- Notifications -->
+                    <div class="bg-white border-b border-gray-200">
+                        <div class="px-6 py-3 bg-gray-50">
+                            <h3 class="text-sm font-semibold text-gray-700 uppercase">Notifications</h3>
+                        </div>
+                        <div class="px-6 py-4 flex items-center justify-between">
+                            <div>
+                                <p class="font-semibold text-gray-900">Message notifications</p>
+                                <p class="text-sm text-gray-500">Get notified when you receive messages</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="messageNotifications" class="sr-only peer" checked onchange="toggleSetting('messageNotifications', this.checked)">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div class="px-6 py-4 flex items-center justify-between border-t">
+                            <div>
+                                <p class="font-semibold text-gray-900">Sound</p>
+                                <p class="text-sm text-gray-500">Play sound for new messages</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="soundNotifications" class="sr-only peer" checked onchange="toggleSetting('soundNotifications', this.checked)">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Privacy -->
+                    <div class="bg-white border-b border-gray-200">
+                        <div class="px-6 py-3 bg-gray-50">
+                            <h3 class="text-sm font-semibold text-gray-700 uppercase">Privacy</h3>
+                        </div>
+                        <div class="px-6 py-4 flex items-center justify-between">
+                            <div>
+                                <p class="font-semibold text-gray-900">Read receipts</p>
+                                <p class="text-sm text-gray-500">Let others know when you've read their messages</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="readReceipts" class="sr-only peer" checked onchange="toggleSetting('readReceipts', this.checked)">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div class="px-6 py-4 flex items-center justify-between border-t">
+                            <div>
+                                <p class="font-semibold text-gray-900">Typing indicators</p>
+                                <p class="text-sm text-gray-500">Show when you're typing</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="typingIndicators" class="sr-only peer" checked onchange="toggleSetting('typingIndicators', this.checked)">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div class="px-6 py-4 flex items-center justify-between border-t">
+                            <div>
+                                <p class="font-semibold text-gray-900">Online status</p>
+                                <p class="text-sm text-gray-500">Show when you're active</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="onlineStatus" class="sr-only peer" checked onchange="toggleSetting('onlineStatus', this.checked)">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Data & Storage -->
+                    <div class="bg-white border-b border-gray-200">
+                        <div class="px-6 py-3 bg-gray-50">
+                            <h3 class="text-sm font-semibold text-gray-700 uppercase">Data & Storage</h3>
+                        </div>
+                        <button onclick="clearMessageCache()" class="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition text-left">
+                            <div>
+                                <p class="font-semibold text-gray-900">Clear cache</p>
+                                <p class="text-sm text-gray-500">Free up storage space</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400"></i>
+                        </button>
+                        <button onclick="downloadMessageData()" class="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition text-left border-t">
+                            <div>
+                                <p class="font-semibold text-gray-900">Download your data</p>
+                                <p class="text-sm text-gray-500">Get a copy of your messages</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- About -->
+                    <div class="bg-white">
+                        <div class="px-6 py-3 bg-gray-50">
+                            <h3 class="text-sm font-semibold text-gray-700 uppercase">About</h3>
+                        </div>
+                        <div class="px-6 py-4">
+                            <p class="text-sm text-gray-600">Coffee Messenger v1.0</p>
+                            <p class="text-xs text-gray-400 mt-1">© 2024 Coffee Platform. All rights reserved.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    loadMessengerSettings();
+}
+
+function loadMessengerSettings() {
+    // Load settings from localStorage
+    const settings = {
+        messageNotifications: localStorage.getItem('messageNotifications') !== 'false',
+        soundNotifications: localStorage.getItem('soundNotifications') !== 'false',
+        readReceipts: localStorage.getItem('readReceipts') !== 'false',
+        typingIndicators: localStorage.getItem('typingIndicators') !== 'false',
+        onlineStatus: localStorage.getItem('onlineStatus') !== 'false'
+    };
+    
+    // Apply settings to checkboxes
+    Object.keys(settings).forEach(key => {
+        const checkbox = document.getElementById(key);
+        if (checkbox) {
+            checkbox.checked = settings[key];
+        }
+    });
+}
+
+function toggleSetting(setting, value) {
+    localStorage.setItem(setting, value);
+    showNotification(`${setting.replace(/([A-Z])/g, ' $1').trim()} ${value ? 'enabled' : 'disabled'}`, 'success');
+}
+
+function clearMessageCache() {
+    if (confirm('Are you sure you want to clear the message cache? This will free up storage space.')) {
+        // Clear any cached data
+        sessionStorage.clear();
+        showNotification('Cache cleared successfully', 'success');
+    }
+}
+
+function downloadMessageData() {
+    showNotification('Preparing your data for download...', 'info');
+    
+    // This would typically call an API to generate a data export
+    setTimeout(() => {
+        showNotification('Data export feature will be available soon', 'info');
+    }, 1500);
 }
 
 async function markAllAsRead() {
