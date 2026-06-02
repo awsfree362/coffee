@@ -482,90 +482,96 @@ async function loadAllComments(postId) {
 }
 
 // Search Page
+let currentSearchTab = 'escort';
+
 async function renderSearchPage() {
     const mainContent = document.getElementById('mainContent');
     
     mainContent.innerHTML = `
-        <div class="w-full px-4">
-            <h1 class="text-3xl font-bold mb-6">Search Profiles</h1>
-            
-            <!-- Search Bar -->
-            <div class="glass rounded-2xl p-6 mb-6">
-                <div class="search-bar mb-4">
-                    <i class="fas fa-search search-icon"></i>
-                    <input type="text" id="searchInput" class="search-input" placeholder="Search by name, location, or ethnicity..." onkeyup="performSearch()">
+        <div class="w-full bg-white" style="min-height: calc(100vh - 120px);">
+            <!-- Search Header -->
+            <div class="sticky top-16 z-30 bg-white border-b border-gray-200">
+                <div class="max-w-2xl mx-auto px-4 py-3">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" 
+                               id="searchInput" 
+                               class="w-full pl-12 pr-4 py-3 bg-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500" 
+                               placeholder="Search" 
+                               oninput="performSearch()">
+                    </div>
                 </div>
                 
-                <!-- Filters -->
-                <div class="grid md:grid-cols-5 gap-4">
-                    <select id="userTypeFilter" class="input-field" onchange="performSearch()">
-                        <option value="">All Types</option>
-                        <option value="escort">Escorts</option>
-                        <option value="venue">Venues</option>
-                    </select>
-                    
-                    <select id="cityFilter" class="input-field" onchange="performSearch()">
-                        <option value="">All Cities</option>
-                        <option value="Johannesburg">Johannesburg</option>
-                        <option value="Cape Town">Cape Town</option>
-                        <option value="Durban">Durban</option>
-                        <option value="Pretoria">Pretoria</option>
-                        <option value="Port Elizabeth">Port Elizabeth</option>
-                        <option value="Bloemfontein">Bloemfontein</option>
-                        <option value="East London">East London</option>
-                        <option value="Nelspruit">Nelspruit</option>
-                        <option value="Polokwane">Polokwane</option>
-                        <option value="Kimberley">Kimberley</option>
-                        <option value="Rustenburg">Rustenburg</option>
-                        <option value="Pietermaritzburg">Pietermaritzburg</option>
-                    </select>
-                    
-                    <select id="ethnicityFilter" class="input-field" onchange="performSearch()">
-                        <option value="">All Ethnicities</option>
-                        <option value="African">African</option>
-                        <option value="Caucasian">Caucasian</option>
-                        <option value="Asian">Asian</option>
-                        <option value="Indian">Indian</option>
-                        <option value="Coloured">Coloured</option>
-                        <option value="Mixed">Mixed</option>
-                    </select>
-                    
-                    <select id="verifiedFilter" class="input-field" onchange="performSearch()">
-                        <option value="">All Profiles</option>
-                        <option value="true">Verified Only</option>
-                    </select>
-                    
-                    <button onclick="clearFilters()" class="btn-secondary">
-                        <i class="fas fa-times mr-2"></i>Clear Filters
+                <!-- Tabs -->
+                <div class="flex border-t border-gray-200">
+                    <button onclick="switchSearchTab('escort')" 
+                            id="searchTabEscorts" 
+                            class="flex-1 px-6 py-4 font-semibold border-b-2 border-pink-500 text-pink-500">
+                        Escorts
+                    </button>
+                    <button onclick="switchSearchTab('venue')" 
+                            id="searchTabVenues" 
+                            class="flex-1 px-6 py-4 font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                        Venues
                     </button>
                 </div>
             </div>
             
             <!-- Results -->
-            <div id="searchResults" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="text-center py-8 col-span-full">
-                    <div class="spinner mx-auto"></div>
+            <div class="max-w-2xl mx-auto">
+                <div id="searchResults" class="divide-y divide-gray-200">
+                    <div class="text-center py-12">
+                        <i class="fas fa-search text-4xl text-gray-300 mb-3"></i>
+                        <p class="text-gray-500">Search for ${currentSearchTab === 'escort' ? 'escorts' : 'venues'}</p>
+                    </div>
                 </div>
             </div>
         </div>
     `;
+}
+
+function switchSearchTab(tab) {
+    currentSearchTab = tab;
     
-    performSearch();
+    // Update tab styles
+    document.getElementById('searchTabEscorts').className = tab === 'escort'
+        ? 'flex-1 px-6 py-4 font-semibold border-b-2 border-pink-500 text-pink-500'
+        : 'flex-1 px-6 py-4 font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700';
+    
+    document.getElementById('searchTabVenues').className = tab === 'venue'
+        ? 'flex-1 px-6 py-4 font-semibold border-b-2 border-pink-500 text-pink-500'
+        : 'flex-1 px-6 py-4 font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700';
+    
+    // Clear search and perform new search
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput && searchInput.value) {
+        performSearch();
+    } else {
+        document.getElementById('searchResults').innerHTML = `
+            <div class="text-center py-12">
+                <i class="fas fa-search text-4xl text-gray-300 mb-3"></i>
+                <p class="text-gray-500">Search for ${tab === 'escort' ? 'escorts' : 'venues'}</p>
+            </div>
+        `;
+    }
 }
 
 async function performSearch() {
-    const query = document.getElementById('searchInput').value;
-    const userType = document.getElementById('userTypeFilter').value;
-    const city = document.getElementById('cityFilter').value;
-    const ethnicity = document.getElementById('ethnicityFilter').value;
-    const verified = document.getElementById('verifiedFilter').value;
+    const query = document.getElementById('searchInput').value.trim();
+    
+    if (!query) {
+        document.getElementById('searchResults').innerHTML = `
+            <div class="text-center py-12">
+                <i class="fas fa-search text-4xl text-gray-300 mb-3"></i>
+                <p class="text-gray-500">Search for ${currentSearchTab === 'escort' ? 'escorts' : 'venues'}</p>
+            </div>
+        `;
+        return;
+    }
     
     const params = new URLSearchParams();
-    if (query) params.append('q', query);
-    if (userType) params.append('user_type', userType);
-    if (city) params.append('city', city);
-    if (ethnicity) params.append('ethnicity', ethnicity);
-    if (verified) params.append('verified', verified);
+    params.append('q', query);
+    params.append('user_type', currentSearchTab);
     
     try {
         const response = await fetch(`${API_BASE}/users/search?${params}`);
@@ -574,35 +580,38 @@ async function performSearch() {
         const container = document.getElementById('searchResults');
         if (data.users && data.users.length > 0) {
             container.innerHTML = data.users.map(user => `
-                <div class="profile-card card-hover cursor-pointer" onclick="viewProfile(${user.id})">
-                    <div class="relative">
-                        <img src="${user.profile_image_url ? '/' + user.profile_image_url : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=ec4899&color=fff`}" 
-                             alt="${user.username}" 
-                             class="w-full h-48 object-cover rounded-lg mb-3">
-                        ${user.is_verified ? '<span class="badge badge-verified absolute top-2 right-2"><i class="fas fa-check-circle mr-1"></i>Verified</span>' : ''}
+                <div class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer" onclick="viewProfile(${user.id})">
+                    <img src="${user.profile_image_url ? '/' + user.profile_image_url : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=ec4899&color=fff`}" 
+                         alt="${user.username}" 
+                         class="w-12 h-12 rounded-full object-cover">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <p class="font-semibold truncate">@${user.username}</p>
+                            ${user.is_verified ? '<i class="fas fa-check-circle text-blue-500 text-sm"></i>' : ''}
+                        </div>
+                        <p class="text-sm text-gray-600 truncate">${user.full_name || user.username}</p>
+                        ${user.bio ? `<p class="text-xs text-gray-500 truncate">${user.bio}</p>` : ''}
                     </div>
-                    <h3 class="font-bold text-lg">${user.username}</h3>
-                    <p class="text-gray-600 text-sm capitalize">${user.user_type}</p>
-                    ${user.city ? `<p class="text-gray-500 text-xs mt-1"><i class="fas fa-map-marker-alt mr-1"></i>${user.city}</p>` : ''}
-                    ${user.ethnicity ? `<p class="text-gray-500 text-xs">${user.ethnicity}</p>` : ''}
                 </div>
             `).join('');
         } else {
-            container.innerHTML = '<p class="text-gray-500 text-center col-span-full py-8">No profiles found</p>';
+            container.innerHTML = `
+                <div class="text-center py-12 px-4">
+                    <i class="fas fa-search text-4xl text-gray-300 mb-3"></i>
+                    <p class="text-gray-500 font-semibold">No results found</p>
+                    <p class="text-sm text-gray-400 mt-2">Try searching for something else</p>
+                </div>
+            `;
         }
     } catch (error) {
         console.error('Search failed:', error);
-        document.getElementById('searchResults').innerHTML = '<p class="text-red-500 text-center col-span-full">Search failed</p>';
+        document.getElementById('searchResults').innerHTML = `
+            <div class="text-center py-12 px-4">
+                <i class="fas fa-exclamation-circle text-4xl text-red-300 mb-3"></i>
+                <p class="text-red-500">Search failed</p>
+            </div>
+        `;
     }
-}
-
-function clearFilters() {
-    document.getElementById('searchInput').value = '';
-    document.getElementById('userTypeFilter').value = '';
-    document.getElementById('cityFilter').value = '';
-    document.getElementById('ethnicityFilter').value = '';
-    document.getElementById('verifiedFilter').value = '';
-    performSearch();
 }
 
 // View Profile
@@ -638,8 +647,9 @@ function renderProfilePage(user) {
                         <img src="${user.profile_image_url ? '/' + user.profile_image_url : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=ec4899&color=fff&size=200`}" 
                              class="avatar-xl border-4 border-white shadow-lg">
                         <div class="flex-1 text-center md:text-left">
-                            <h1 class="text-3xl font-bold">${user.username}</h1>
-                            <p class="text-gray-600 capitalize">${user.user_type}</p>
+                            <h1 class="text-3xl font-bold">@${user.username}</h1>
+                            <p class="text-gray-600">${user.full_name || user.username}</p>
+                            <p class="text-sm text-gray-500 capitalize">${user.user_type}</p>
                             ${user.is_verified ? '<span class="badge badge-verified mt-2"><i class="fas fa-check-circle mr-1"></i>Verified</span>' : ''}
                         </div>
                         <div class="flex gap-3">
