@@ -40,12 +40,59 @@ def create_reel():
         return jsonify({'error': 'Video file required'}), 400
     
     video_file = files['video']
-    video_url = save_file(video_file, 'reels')
+    
+    # Validate video duration
+    try:
+        import subprocess
+        import tempfile
+        import os
+        
+        # Save temporarily to check duration
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+        video_file.save(temp_file.name)
+        temp_file.close()
+        
+        # Get duration using ffprobe
+        try:
+            result = subprocess.run(
+                ['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', temp_file.name],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                timeout=10
+            )
+            duration = float(result.stdout)
+            
+            if duration > 60:
+                os.unlink(temp_file.name)
+                return jsonify({
+                    'error': 'Video too long',
+                    'message': f'Video duration is {int(duration)} seconds. Maximum allowed is 60 seconds (1 minute).'
+                }), 400
+        except:
+            # If ffprobe not available, use duration from form
+            duration = float(data.get('duration', 0))
+        
+        # Save the video file
+        video_file.seek(0)  # Reset file pointer
+        video_url = save_file(video_file, 'reels')
+        
+        # Clean up temp file
+        try:
+            os.unlink(temp_file.name)
+        except:
+            pass
+            
+    except Exception as e:
+        print(f"Error processing video: {e}")
+        # Fallback to just saving the file
+        video_file.seek(0)
+        video_url = save_file(video_file, 'reels')
+        duration = float(data.get('duration', 0))
     
     reel_id = execute_query(
         '''INSERT INTO reels (user_id, caption, video_url, duration) 
            VALUES (%s, %s, %s, %s)''',
-        (user_id, data.get('caption'), video_url, data.get('duration', 0))
+        (user_id, data.get('caption'), video_url, int(duration))
     )
     
     return jsonify({'message': 'Reel created', 'reel_id': reel_id}), 201

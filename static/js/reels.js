@@ -264,6 +264,17 @@ async function submitReelComment(e, reelId) {
 }
 
 function showCreateReelModal() {
+    if (!currentUser) {
+        showAuthModal();
+        return;
+    }
+    
+    // Check if user is paid lister
+    if (currentUser.user_type === 'visitor') {
+        showNotification('Only escorts and venues can create reels', 'error');
+        return;
+    }
+    
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
     
@@ -279,16 +290,19 @@ function showCreateReelModal() {
             <form onsubmit="submitReel(event)" id="createReelForm">
                 <div class="mb-4">
                     <label class="block text-gray-700 font-semibold mb-2">Video * (Max 60 seconds)</label>
-                    <input type="file" id="reelVideo" accept="video/*" class="input-field" required>
+                    <input type="file" id="reelVideo" accept="video/*" class="input-field" required onchange="validateReelVideo(this)">
+                    <p class="text-sm text-gray-500 mt-1">Maximum duration: 1 minute</p>
                     <div id="videoPreview" class="mt-4 hidden"></div>
+                    <div id="videoDuration" class="text-sm text-gray-600 mt-2 hidden"></div>
                 </div>
                 
                 <div class="mb-4">
                     <label class="block text-gray-700 font-semibold mb-2">Caption</label>
-                    <textarea id="reelCaption" class="input-field" rows="3" placeholder="Write a caption..."></textarea>
+                    <textarea id="reelCaption" class="input-field" rows="3" placeholder="Write a caption..." maxlength="500"></textarea>
+                    <p class="text-sm text-gray-500 mt-1">Max 500 characters</p>
                 </div>
                 
-                <button type="submit" class="btn-primary w-full">
+                <button type="submit" id="submitReelBtn" class="btn-primary w-full">
                     <i class="fas fa-paper-plane mr-2"></i>Post Reel
                 </button>
             </form>
@@ -296,15 +310,46 @@ function showCreateReelModal() {
     `;
     
     document.body.appendChild(modal);
+}
+
+function validateReelVideo(input) {
+    const file = input.files[0];
+    if (!file) return;
     
-    document.getElementById('reelVideo').onchange = function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const preview = document.getElementById('videoPreview');
+    const preview = document.getElementById('videoPreview');
+    const durationDiv = document.getElementById('videoDuration');
+    const submitBtn = document.getElementById('submitReelBtn');
+    
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    
+    video.onloadedmetadata = function() {
+        window.URL.revokeObjectURL(video.src);
+        const duration = Math.floor(video.duration);
+        
+        durationDiv.classList.remove('hidden');
+        durationDiv.textContent = `Duration: ${duration} seconds`;
+        
+        if (duration > 60) {
+            durationDiv.classList.add('text-red-500');
+            durationDiv.textContent = `Duration: ${duration} seconds - TOO LONG! Maximum is 60 seconds.`;
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            showNotification('Video is too long! Maximum duration is 60 seconds (1 minute).', 'error');
+            input.value = '';
+            preview.classList.add('hidden');
+        } else {
+            durationDiv.classList.remove('text-red-500');
+            durationDiv.classList.add('text-green-500');
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            
             preview.innerHTML = `<video src="${URL.createObjectURL(file)}" class="w-full rounded-lg" controls></video>`;
             preview.classList.remove('hidden');
         }
     };
+    
+    video.src = URL.createObjectURL(file);
 }
 
 async function submitReel(e) {
