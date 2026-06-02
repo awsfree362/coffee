@@ -482,34 +482,69 @@ async function loadAllComments(postId) {
 }
 
 // Search Page
-let currentSearchTab = 'escort';
-
 async function renderSearchPage() {
     const mainContent = document.getElementById('mainContent');
     
     mainContent.innerHTML = `
-        <div class="w-full bg-white" style="min-height: calc(100vh - 120px);">
+        <div class="w-full bg-white search-container" style="min-height: calc(100vh - 120px);">
             <!-- Search Header -->
-            <div class="sticky top-16 z-30 bg-white border-b border-gray-200">
+            <div class="sticky top-16 z-40 bg-white border-b border-gray-200">
                 <div class="max-w-2xl mx-auto px-4 py-3">
                     <div class="relative">
                         <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                         <input type="text" 
                                id="searchInput" 
-                               class="w-full pl-12 pr-4 py-3 bg-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500" 
+                               class="w-full pl-12 pr-10 py-3 bg-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500" 
                                placeholder="Search" 
-                               oninput="performSearch()">
+                               autocomplete="off">
+                        <button onclick="toggleFilters()" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-600 hover:text-gray-800">
+                            <i class="fas fa-sliders-h"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Filters Panel -->
+                    <div id="filtersPanel" class="hidden mt-3 p-4 bg-gray-50 rounded-xl">
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" onchange="window.searchManager.toggleFilter('verified')" class="form-checkbox text-pink-500">
+                                <span class="text-sm">Verified only</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" onchange="window.searchManager.toggleFilter('online')" class="form-checkbox text-pink-500">
+                                <span class="text-sm">Online now</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" onchange="window.searchManager.toggleFilter('hasPhotos')" class="form-checkbox text-pink-500">
+                                <span class="text-sm">Has photos</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" onchange="window.searchManager.toggleFilter('hasVideos')" class="form-checkbox text-pink-500">
+                                <span class="text-sm">Has videos</span>
+                            </label>
+                        </div>
+                        <div class="mt-3">
+                            <label class="text-sm text-gray-700">Sort by</label>
+                            <select onchange="window.searchManager.setFilter('sortBy', this.value)" class="w-full mt-1 p-2 border rounded-lg">
+                                <option value="relevance">Relevance</option>
+                                <option value="popular">Most Popular</option>
+                                <option value="recent">Recently Joined</option>
+                                <option value="active">Most Active</option>
+                            </select>
+                        </div>
+                        <button onclick="window.searchManager.clearFilters()" class="mt-3 w-full py-2 text-sm text-pink-500 hover:bg-pink-50 rounded-lg">
+                            Clear filters
+                        </button>
                     </div>
                 </div>
                 
                 <!-- Tabs -->
                 <div class="flex border-t border-gray-200">
-                    <button onclick="switchSearchTab('escort')" 
+                    <button onclick="window.searchManager.switchTab('escorts')" 
                             id="searchTabEscorts" 
                             class="flex-1 px-6 py-4 font-semibold border-b-2 border-pink-500 text-pink-500">
                         Escorts
                     </button>
-                    <button onclick="switchSearchTab('venue')" 
+                    <button onclick="window.searchManager.switchTab('venues')" 
                             id="searchTabVenues" 
                             class="flex-1 px-6 py-4 font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700">
                         Venues
@@ -517,101 +552,35 @@ async function renderSearchPage() {
                 </div>
             </div>
             
-            <!-- Results -->
+            <!-- Search Overlay (for autocomplete, history, trending) -->
+            <div id="searchOverlay" class="hidden absolute top-32 left-0 right-0 bg-white border-b border-gray-200 z-30 max-h-96 overflow-y-auto">
+                <div id="searchResultsContainer" class="max-w-2xl mx-auto">
+                    <!-- Dynamic content loaded by search.js -->
+                </div>
+            </div>
+            
+            <!-- Main Results -->
             <div class="max-w-2xl mx-auto">
-                <div id="searchResults" class="divide-y divide-gray-200">
+                <div id="searchResultsContainer" class="divide-y divide-gray-200">
                     <div class="text-center py-12">
                         <i class="fas fa-search text-4xl text-gray-300 mb-3"></i>
-                        <p class="text-gray-500">Search for ${currentSearchTab === 'escort' ? 'escorts' : 'venues'}</p>
+                        <p class="text-gray-500">Search for escorts or venues</p>
+                        <p class="text-sm text-gray-400 mt-2">Start typing to see suggestions</p>
                     </div>
                 </div>
             </div>
         </div>
     `;
-}
-
-function switchSearchTab(tab) {
-    currentSearchTab = tab;
     
-    // Update tab styles
-    document.getElementById('searchTabEscorts').className = tab === 'escort'
-        ? 'flex-1 px-6 py-4 font-semibold border-b-2 border-pink-500 text-pink-500'
-        : 'flex-1 px-6 py-4 font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700';
-    
-    document.getElementById('searchTabVenues').className = tab === 'venue'
-        ? 'flex-1 px-6 py-4 font-semibold border-b-2 border-pink-500 text-pink-500'
-        : 'flex-1 px-6 py-4 font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700';
-    
-    // Clear search and perform new search
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput && searchInput.value) {
-        performSearch();
-    } else {
-        document.getElementById('searchResults').innerHTML = `
-            <div class="text-center py-12">
-                <i class="fas fa-search text-4xl text-gray-300 mb-3"></i>
-                <p class="text-gray-500">Search for ${tab === 'escort' ? 'escorts' : 'venues'}</p>
-            </div>
-        `;
+    // Initialize search manager if not already done
+    if (window.searchManager) {
+        await window.searchManager.showDefaultSearch();
     }
 }
 
-async function performSearch() {
-    const query = document.getElementById('searchInput').value.trim();
-    
-    if (!query) {
-        document.getElementById('searchResults').innerHTML = `
-            <div class="text-center py-12">
-                <i class="fas fa-search text-4xl text-gray-300 mb-3"></i>
-                <p class="text-gray-500">Search for ${currentSearchTab === 'escort' ? 'escorts' : 'venues'}</p>
-            </div>
-        `;
-        return;
-    }
-    
-    const params = new URLSearchParams();
-    params.append('q', query);
-    params.append('user_type', currentSearchTab);
-    
-    try {
-        const response = await fetch(`${API_BASE}/users/search?${params}`);
-        const data = await response.json();
-        
-        const container = document.getElementById('searchResults');
-        if (data.users && data.users.length > 0) {
-            container.innerHTML = data.users.map(user => `
-                <div class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer" onclick="viewProfile(${user.id})">
-                    <img src="${user.profile_image_url ? '/' + user.profile_image_url : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=ec4899&color=fff`}" 
-                         alt="${user.username}" 
-                         class="w-12 h-12 rounded-full object-cover">
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2">
-                            <p class="font-semibold truncate">@${user.username}</p>
-                            ${user.is_verified ? '<i class="fas fa-check-circle text-blue-500 text-sm"></i>' : ''}
-                        </div>
-                        <p class="text-sm text-gray-600 truncate">${user.full_name || user.username}</p>
-                        ${user.bio ? `<p class="text-xs text-gray-500 truncate">${user.bio}</p>` : ''}
-                    </div>
-                </div>
-            `).join('');
-        } else {
-            container.innerHTML = `
-                <div class="text-center py-12 px-4">
-                    <i class="fas fa-search text-4xl text-gray-300 mb-3"></i>
-                    <p class="text-gray-500 font-semibold">No results found</p>
-                    <p class="text-sm text-gray-400 mt-2">Try searching for something else</p>
-                </div>
-            `;
-        }
-    } catch (error) {
-        console.error('Search failed:', error);
-        document.getElementById('searchResults').innerHTML = `
-            <div class="text-center py-12 px-4">
-                <i class="fas fa-exclamation-circle text-4xl text-red-300 mb-3"></i>
-                <p class="text-red-500">Search failed</p>
-            </div>
-        `;
-    }
+function toggleFilters() {
+    const panel = document.getElementById('filtersPanel');
+    panel.classList.toggle('hidden');
 }
 
 // View Profile
